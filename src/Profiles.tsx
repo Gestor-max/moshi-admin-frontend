@@ -233,15 +233,7 @@ const Profiles: React.FC = () => {
     }
   };
 
-  const parseCity = (ubicacionStr?: string) => {
-    if (!ubicacionStr) return '-';
-    try {
-      const obj = JSON.parse(ubicacionStr);
-      return obj.ciudad || '-';
-    } catch {
-      return ubicacionStr || '-';
-    }
-  };
+
 
   return (
     <div className="dashboard">

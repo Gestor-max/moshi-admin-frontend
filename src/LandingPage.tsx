@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { 
-  Bot, Download, ShieldCheck, Zap, Server, Globe, UserCheck, 
-  HelpCircle, ArrowRight, CheckCircle2, Monitor, ChevronRight, Lock
+  Bot, Download, Zap, Server, Globe, UserCheck, 
+  ArrowRight, CheckCircle2, Monitor, ChevronRight, Lock
 } from 'lucide-react';
 
 const LandingPage: React.FC = () => {

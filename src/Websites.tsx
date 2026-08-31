@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from './AuthContext';
-import { Globe, Plus, Search, Trash2, Edit2, Shield, X, Save, AlertCircle } from 'lucide-react';
+import { Globe, Plus, Search, Trash2, Edit2, X, Save, AlertCircle } from 'lucide-react';
 
 interface WebsiteItem {
   id: number;
