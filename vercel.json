@@ -1,0 +1,6 @@
+# Vercel Deployment Configuration for Frontend
+{
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
