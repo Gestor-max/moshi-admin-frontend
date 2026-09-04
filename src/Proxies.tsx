@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { api } from './api';
-import { useAuth } from './AuthContext';
 import { useLanguage } from './LanguageContext';
 import { Server, Plus, Search, Trash2, Edit2, X, Save } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -14,7 +13,6 @@ interface ProxyItem {
 }
 
 const Proxies: React.FC = () => {
-  const { token } = useAuth();
   const { t } = useLanguage();
   const [proxies, setProxies] = useState<ProxyItem[]>([]);
   const [search, setSearch] = useState('');
