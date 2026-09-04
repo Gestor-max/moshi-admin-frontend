@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { api } from './api';
 import { useAuth } from './AuthContext';
 import { useLanguage } from './LanguageContext';
 import { Link as LinkIcon, Plus, Search, Trash2, Edit2, X, Save, Eye, EyeOff, AlertCircle } from 'lucide-react';
@@ -14,6 +14,7 @@ interface ProfileItem {
   id: number;
   name: string;
   lastname: string;
+  gmail?: string;
   profile_email?: string;
   user_id?: number;
 }
@@ -24,13 +25,13 @@ interface ProfileWebsiteAccount {
   website_id: number;
   email: string;
   password: string;
-  cookie: string;
+  cookie?: string;
   profile?: ProfileItem;
   website?: WebsiteItem;
 }
 
 const LinkedProfiles: React.FC = () => {
-  const { token, isAdmin } = useAuth();
+  const { isAdmin } = useAuth();
   const { t } = useLanguage();
   
   // Data states
@@ -59,10 +60,7 @@ const LinkedProfiles: React.FC = () => {
 
   const fetchAccounts = async (query = '') => {
     try {
-      const res = await axios.get(
-        `http://localhost:3001/websites/accounts${query ? `?search=${query}` : ''}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const res = await api.get(`/websites/accounts${query ? `?search=${query}` : ''}`);
       setAccounts(res.data);
     } catch (err) {
       console.error(err);
@@ -71,9 +69,7 @@ const LinkedProfiles: React.FC = () => {
 
   const fetchWebsites = async () => {
     try {
-      const res = await axios.get('http://localhost:3001/websites', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await api.get('/websites');
       setWebsites(res.data);
       if (res.data.length > 0 && !accountWebsiteId) {
         setAccountWebsiteId(String(res.data[0].id));
@@ -85,9 +81,7 @@ const LinkedProfiles: React.FC = () => {
 
   const fetchProfiles = async () => {
     try {
-      const res = await axios.get('http://localhost:3001/profiles', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await api.get('/profiles');
       setProfiles(res.data);
       if (res.data.length > 0 && !accountProfileId) {
         setAccountProfileId(String(res.data[0].id));
@@ -110,17 +104,13 @@ const LinkedProfiles: React.FC = () => {
     e.preventDefault();
     setErrorMessage('');
     try {
-      await axios.post(
-        'http://localhost:3001/websites/accounts',
-        {
-          profile_id: Number(accountProfileId),
-          website_id: Number(accountWebsiteId),
-          email: accountEmail,
-          password: accountPassword,
-          cookie: accountCookie,
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await api.post('/websites/accounts', {
+        profile_id: Number(accountProfileId),
+        website_id: Number(accountWebsiteId),
+        email: accountEmail,
+        password: accountPassword,
+        cookie: accountCookie,
+      });
       setAccountEmail('');
       setAccountPassword('');
       setAccountCookie('');
@@ -136,15 +126,11 @@ const LinkedProfiles: React.FC = () => {
     if (!editingAccount) return;
     setErrorMessage('');
     try {
-      await axios.patch(
-        `http://localhost:3001/websites/accounts/${editingAccount.id}`,
-        {
-          email: editingAccount.email,
-          password: editingAccount.password,
-          cookie: editingAccount.cookie,
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await api.patch(`/websites/accounts/${editingAccount.id}`, {
+        email: editingAccount.email,
+        password: editingAccount.password,
+        cookie: editingAccount.cookie,
+      });
       setEditingAccount(null);
       fetchAccounts(searchAccounts);
     } catch (err: any) {
@@ -155,9 +141,7 @@ const LinkedProfiles: React.FC = () => {
   const handleDeleteAccount = async (id: number) => {
     if (!window.confirm('¿Deseas desvincular esta cuenta del perfil?')) return;
     try {
-      await axios.delete(`http://localhost:3001/websites/accounts/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await api.delete(`/websites/accounts/${id}`);
       fetchAccounts(searchAccounts);
     } catch (err) {
       console.error(err);

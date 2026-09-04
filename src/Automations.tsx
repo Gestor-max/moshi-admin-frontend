@@ -1,18 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { api } from './api';
 import { useAuth } from './AuthContext';
 import { useLanguage } from './LanguageContext';
-import { Plus, Search, Trash2, Edit2, X, Save, AlertCircle, PlayCircle, FileCode } from 'lucide-react';
+import { Bot, Plus, Search, Trash2, Edit2, X, Save, AlertCircle, FileCode } from 'lucide-react';
 
 interface AutomationItem {
   id: number;
   name: string;
-  description: string;
+  description?: string;
   filename?: string;
+  status: number;
 }
 
 const Automations: React.FC = () => {
-  const { token, isAdmin } = useAuth();
+  const { isAdmin } = useAuth();
   const { t } = useLanguage();
   
   // Data states
@@ -32,10 +33,7 @@ const Automations: React.FC = () => {
 
   const fetchAutomations = async (query = '') => {
     try {
-      const res = await axios.get(
-        `http://localhost:3001/automations${query ? `?search=${query}` : ''}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const res = await api.get(`/automations${query ? `?search=${query}` : ''}`);
       setAutomations(res.data);
     } catch (err) {
       console.error(err);
@@ -55,11 +53,7 @@ const Automations: React.FC = () => {
     e.preventDefault();
     setErrorMessage('');
     try {
-      await axios.post(
-        'http://localhost:3001/automations',
-        { name, description, filename },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await api.post('/automations', { name, description, filename });
       setName('');
       setDescription('');
       setFilename('');
@@ -75,15 +69,11 @@ const Automations: React.FC = () => {
     if (!editingAutomation) return;
     setErrorMessage('');
     try {
-      await axios.patch(
-        `http://localhost:3001/automations/${editingAutomation.id}`,
-        {
-          name: editingAutomation.name,
-          description: editingAutomation.description,
-          filename: editingAutomation.filename,
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await api.patch(`/automations/${editingAutomation.id}`, {
+        name: editingAutomation.name,
+        description: editingAutomation.description,
+        filename: editingAutomation.filename,
+      });
       setEditingAutomation(null);
       fetchAutomations(searchQuery);
     } catch (err: any) {
@@ -94,9 +84,7 @@ const Automations: React.FC = () => {
   const handleDelete = async (id: number) => {
     if (!window.confirm('¿Eliminar?')) return;
     try {
-      await axios.delete(`http://localhost:3001/automations/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await api.delete(`/automations/${id}`);
       fetchAutomations(searchQuery);
     } catch (err) {
       console.error(err);

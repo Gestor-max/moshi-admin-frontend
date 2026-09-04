@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { api } from './api';
 import { useAuth } from './AuthContext';
 import { Users as UsersIcon, Plus, Shield, UserX, UserCheck, Key, Trash2, X } from 'lucide-react';
 
@@ -31,12 +31,9 @@ const Users: React.FC = () => {
   // Password change
   const [changePassword, setChangePassword] = useState('');
 
-  const API = 'http://localhost:3001';
-  const headers = { Authorization: `Bearer ${token}` };
-
   const fetchUsers = async () => {
     try {
-      const res = await axios.get(`${API}/auth/users`, { headers });
+      const res = await api.get('/auth/users');
       setUsers(res.data);
     } catch (err) {
       console.error(err);
@@ -58,12 +55,12 @@ const Users: React.FC = () => {
     e.preventDefault();
     clearMessages();
     try {
-      await axios.post(`${API}/auth/users`, {
+      await api.post('/auth/users', {
         email: newEmail,
         password: newPassword,
         name: newName,
         rol: newRol,
-      }, { headers });
+      });
       setSuccess('Usuario creado exitosamente');
       setShowCreateModal(false);
       setNewEmail('');
@@ -80,7 +77,7 @@ const Users: React.FC = () => {
     clearMessages();
     try {
       const newStatus = u.status === 1 ? 0 : 1;
-      await axios.patch(`${API}/auth/users/${u.id}/status`, { status: newStatus }, { headers });
+      await api.patch(`/auth/users/${u.id}/status`, { status: newStatus });
       setSuccess(`Usuario ${newStatus === 1 ? 'activado' : 'desactivado'}`);
       fetchUsers();
     } catch (err: any) {
@@ -92,7 +89,7 @@ const Users: React.FC = () => {
     clearMessages();
     try {
       const newRol = u.rol === 1 ? 2 : 1;
-      await axios.patch(`${API}/auth/users/${u.id}/rol`, { rol: newRol }, { headers });
+      await api.patch(`/auth/users/${u.id}/rol`, { rol: newRol });
       setSuccess(`Rol actualizado a ${newRol === 1 ? 'Administrador' : 'Usuario'}`);
       fetchUsers();
     } catch (err: any) {
@@ -105,7 +102,7 @@ const Users: React.FC = () => {
     clearMessages();
     if (!selectedUser) return;
     try {
-      await axios.patch(`${API}/auth/users/${selectedUser.id}/password`, { password: changePassword }, { headers });
+      await api.patch(`/auth/users/${selectedUser.id}/password`, { password: changePassword });
       setSuccess('Contraseña actualizada');
       setShowPasswordModal(false);
       setChangePassword('');
@@ -119,7 +116,7 @@ const Users: React.FC = () => {
     clearMessages();
     if (!selectedUser) return;
     try {
-      await axios.delete(`${API}/auth/users/${selectedUser.id}`, { headers });
+      await api.delete(`/auth/users/${selectedUser.id}`);
       setSuccess('Usuario eliminado');
       setShowDeleteModal(false);
       setSelectedUser(null);

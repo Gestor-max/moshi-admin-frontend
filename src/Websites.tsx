@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { api } from './api';
 import { useAuth } from './AuthContext';
 import { Globe, Plus, Search, Trash2, Edit2, X, Save, AlertCircle } from 'lucide-react';
 
@@ -33,10 +33,7 @@ const Websites: React.FC = () => {
 
   const fetchWebsites = async (query = '') => {
     try {
-      const res = await axios.get(
-        `http://localhost:3001/websites${query ? `?search=${query}` : ''}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const res = await api.get(`/websites${query ? `?search=${query}` : ''}`);
       setWebsites(res.data);
     } catch (err) {
       console.error(err);
@@ -56,11 +53,7 @@ const Websites: React.FC = () => {
     e.preventDefault();
     setErrorMessage('');
     try {
-      await axios.post(
-        'http://localhost:3001/websites',
-        { name: newSiteName, url: newSiteUrl },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await api.post('/websites', { name: newSiteName, url: newSiteUrl });
       setNewSiteName('');
       setNewSiteUrl('');
       setIsNewSiteModalOpen(false);
@@ -75,11 +68,7 @@ const Websites: React.FC = () => {
     if (!editingWebsite) return;
     setErrorMessage('');
     try {
-      await axios.patch(
-        `http://localhost:3001/websites/${editingWebsite.id}`,
-        { name: editingWebsite.name, url: editingWebsite.url },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await api.patch(`/websites/${editingWebsite.id}`, { name: editingWebsite.name, url: editingWebsite.url });
       setEditingWebsite(null);
       fetchWebsites(searchCatalog);
     } catch (err: any) {
@@ -90,9 +79,7 @@ const Websites: React.FC = () => {
   const handleDeleteWebsite = async (id: number) => {
     if (!window.confirm('¿Eliminar este sitio web del catálogo? Se borrarán también las cuentas asociadas.')) return;
     try {
-      await axios.delete(`http://localhost:3001/websites/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await api.delete(`/websites/${id}`);
       fetchWebsites(searchCatalog);
     } catch (err) {
       console.error(err);

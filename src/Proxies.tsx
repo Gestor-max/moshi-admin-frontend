@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { api } from './api';
 import { useAuth } from './AuthContext';
 import { useLanguage } from './LanguageContext';
 import { Server, Plus, Search, Trash2, Edit2, X, Save } from 'lucide-react';
@@ -23,10 +23,7 @@ const Proxies: React.FC = () => {
 
   const fetchProxies = async (searchQuery = '') => {
     try {
-      const res = await axios.get(
-        `http://localhost:3001/proxies${searchQuery ? `?search=${searchQuery}` : ''}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const res = await api.get(`/proxies${searchQuery ? `?search=${searchQuery}` : ''}`);
       setProxies(res.data);
     } catch (err) {
       console.error(err);
@@ -47,9 +44,7 @@ const Proxies: React.FC = () => {
   const handleDelete = async (id: number) => {
     if (!window.confirm('¿Estás seguro de eliminar este proxy?')) return;
     try {
-      await axios.delete(`http://localhost:3001/proxies/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await api.delete(`/proxies/${id}`);
       setProxies(proxies.filter((p) => p.id !== id));
     } catch (err) {
       console.error(err);
@@ -60,16 +55,12 @@ const Proxies: React.FC = () => {
     e.preventDefault();
     if (!editingProxy) return;
     try {
-      await axios.patch(
-        `http://localhost:3001/proxies/${editingProxy.id}`,
-        {
-          ip: editingProxy.ip,
-          port: editingProxy.port,
-          username: editingProxy.username,
-          password: editingProxy.password,
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await api.patch(`/proxies/${editingProxy.id}`, {
+        ip: editingProxy.ip,
+        port: editingProxy.port,
+        username: editingProxy.username,
+        password: editingProxy.password,
+      });
       setEditingProxy(null);
       fetchProxies(search);
     } catch (err) {

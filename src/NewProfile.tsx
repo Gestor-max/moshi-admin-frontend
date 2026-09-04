@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { api } from './api';
 import { useAuth } from './AuthContext';
 import { useLanguage } from './LanguageContext';
 import { useNavigate, Link } from 'react-router-dom';
@@ -81,16 +81,14 @@ const NewProfile: React.FC = () => {
   useEffect(() => {
     const fetchProxies = async () => {
       try {
-        const res = await axios.get('http://localhost:3001/proxies', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await api.get('/proxies');
         setProxies(res.data);
       } catch (err) {
         console.error(err);
       }
     };
     fetchProxies();
-  }, [token]);
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -109,8 +107,8 @@ const NewProfile: React.FC = () => {
     setError('');
 
     try {
-      await axios.post(
-        'http://localhost:3001/profiles',
+      await api.post(
+        '/profiles',
         {
           ...formData,
           mes_nac: Number(formData.mes_nac) || 1,
@@ -120,8 +118,7 @@ const NewProfile: React.FC = () => {
           empleo: JSON.stringify(empleo),
           educacion: JSON.stringify(educacion),
           ubicacion: JSON.stringify(ubicacion),
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
+        }
       );
       navigate('/profiles');
     } catch (err: any) {

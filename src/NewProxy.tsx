@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import { api } from './api';
 import { useAuth } from './AuthContext';
 import { useLanguage } from './LanguageContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Server, Save, ArrowLeft, FileText, Settings } from 'lucide-react';
-import { Link } from 'react-router-dom';
 
 const NewProxy: React.FC = () => {
   const { t } = useLanguage();
@@ -65,11 +64,7 @@ const NewProxy: React.FC = () => {
     }
 
     try {
-      await axios.post(
-        'http://localhost:3001/proxies',
-        { ip: finalIp, port: finalPort, username: finalUsername, password: finalPassword },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await api.post('/proxies', { ip: finalIp, port: finalPort, username: finalUsername, password: finalPassword });
       navigate('/proxies');
     } catch (err: any) {
       console.error(err);

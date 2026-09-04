@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import { api } from './api';
 import { useAuth } from './AuthContext';
 import { User, Mail, Lock, ShieldCheck, Save } from 'lucide-react';
 
@@ -26,9 +26,7 @@ const Profile: React.FC = () => {
       const payload: any = { name, email };
       if (password) payload.password = password;
 
-      const res = await axios.patch('http://localhost:3001/auth/profile', payload, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await api.patch('/auth/profile', payload);
 
       login(token!, { ...user!, ...res.data });
       setMessage({ type: 'success', text: '¡Perfil actualizado con éxito!' });

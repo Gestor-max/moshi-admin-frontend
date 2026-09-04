@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { api } from './api';
 import { useAuth } from './AuthContext';
 import { useLanguage } from './LanguageContext';
 import { UserCheck, Plus, Search, Trash2, Edit2, X, Save, AlertCircle, Link as LinkIcon, Briefcase, GraduationCap, MapPin, Key, User } from 'lucide-react';
@@ -88,10 +88,7 @@ const Profiles: React.FC = () => {
 
   const fetchProfiles = async (searchQuery = '') => {
     try {
-      const res = await axios.get(
-        `http://localhost:3001/profiles${searchQuery ? `?search=${searchQuery}` : ''}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const res = await api.get(`/profiles${searchQuery ? `?search=${searchQuery}` : ''}`);
       setProfiles(res.data);
     } catch (err) {
       console.error(err);
@@ -102,9 +99,7 @@ const Profiles: React.FC = () => {
 
   const fetchProxies = async () => {
     try {
-      const res = await axios.get('http://localhost:3001/proxies', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await api.get('/proxies');
       setProxies(res.data);
     } catch (err) {
       console.error(err);
@@ -113,9 +108,7 @@ const Profiles: React.FC = () => {
 
   const fetchWebsites = async () => {
     try {
-      const res = await axios.get('http://localhost:3001/websites', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await api.get('/websites');
       setWebsites(res.data);
       if (res.data.length > 0) {
         setSelectedWebsiteId(String(res.data[0].id));
@@ -139,9 +132,7 @@ const Profiles: React.FC = () => {
   const handleDelete = async (id: number) => {
     if (!window.confirm('¿Estás seguro de eliminar este perfil?')) return;
     try {
-      await axios.delete(`http://localhost:3001/profiles/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await api.delete(`/profiles/${id}`);
       fetchProfiles(search);
     } catch (err) {
       console.error(err);
@@ -182,17 +173,13 @@ const Profiles: React.FC = () => {
     }
 
     try {
-      await axios.patch(
-        `http://localhost:3001/profiles/${editingProfile.id}`,
-        {
+      await api.patch(`/profiles/${editingProfile.id}`, {
           ...editingProfile,
           proxy_id: editingProfile.proxy_id ? Number(editingProfile.proxy_id) : null,
           empleo: JSON.stringify(editEmpleo),
           educacion: JSON.stringify(editEducacion),
           ubicacion: JSON.stringify(editUbicacion),
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+        });
       setEditingProfile(null);
       fetchProfiles(search);
     } catch (err: any) {
@@ -214,17 +201,13 @@ const Profiles: React.FC = () => {
     setModalError('');
 
     try {
-      await axios.post(
-        'http://localhost:3001/websites/accounts',
-        {
+      await api.post('/websites/accounts', {
           profile_id: addingSiteToProfile.id,
           website_id: Number(selectedWebsiteId),
           email: siteEmail,
           password: sitePassword,
           cookie: siteCookie,
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+        });
 
       setAddingSiteToProfile(null);
       fetchProfiles(search);
