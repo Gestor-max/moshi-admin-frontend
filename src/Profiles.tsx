@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { api } from './api';
-import { useAuth } from './AuthContext';
 import { useLanguage } from './LanguageContext';
 import { UserCheck, Plus, Search, Trash2, Edit2, X, Save, AlertCircle, Link as LinkIcon, Briefcase, GraduationCap, MapPin, Key, User } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -63,7 +62,6 @@ interface ProfileItem {
 type TabType = 'basica' | 'credenciales' | 'empleo' | 'educacion' | 'ubicacion';
 
 const Profiles: React.FC = () => {
-  const { token } = useAuth();
   const { t } = useLanguage();
   const [profiles, setProfiles] = useState<ProfileItem[]>([]);
   const [proxies, setProxies] = useState<ProxyItem[]>([]);

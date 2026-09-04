@@ -13,7 +13,7 @@ interface WebsiteItem {
 }
 
 const Websites: React.FC = () => {
-  const { token, isAdmin } = useAuth();
+  const { isAdmin } = useAuth();
   
   // Data states
   const [websites, setWebsites] = useState<WebsiteItem[]>([]);

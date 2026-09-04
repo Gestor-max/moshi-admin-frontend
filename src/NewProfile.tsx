@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { api } from './api';
-import { useAuth } from './AuthContext';
 import { useLanguage } from './LanguageContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { UserCheck, Save, ArrowLeft, Briefcase, GraduationCap, MapPin, Key, User } from 'lucide-react';
@@ -15,7 +14,6 @@ interface ProxyItem {
 type TabType = 'basica' | 'credenciales' | 'empleo' | 'educacion' | 'ubicacion';
 
 const NewProfile: React.FC = () => {
-  const { token } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
 

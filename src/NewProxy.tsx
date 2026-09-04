@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { api } from './api';
-import { useAuth } from './AuthContext';
 import { useLanguage } from './LanguageContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { Server, Save, ArrowLeft, FileText, Settings } from 'lucide-react';
@@ -16,7 +15,7 @@ const NewProxy: React.FC = () => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const { token } = useAuth();
+
   const navigate = useNavigate();
 
   const handleProxyStringChange = (val: string) => {

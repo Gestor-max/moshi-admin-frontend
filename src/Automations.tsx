@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from './api';
 import { useAuth } from './AuthContext';
 import { useLanguage } from './LanguageContext';
-import { Bot, Plus, Search, Trash2, Edit2, X, Save, AlertCircle, FileCode } from 'lucide-react';
+import { PlayCircle, Plus, Search, Trash2, Edit2, X, Save, AlertCircle, FileCode } from 'lucide-react';
 
 interface AutomationItem {
   id: number;
