@@ -41,6 +41,7 @@ interface ProfileItem {
   description_html?: string;
   gmail?: string;
   gmail_password?: string;
+  email_recovery?: string;
   profile_email?: string;
   profile_email_password?: string;
   bio?: string;
@@ -659,6 +660,15 @@ const Profiles: React.FC = () => {
                       className="input-field"
                       value={editingProfile.gmail_password || ''}
                       onChange={(e) => setEditingProfile({ ...editingProfile, gmail_password: e.target.value })}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Correo de Recuperación (Gmail)</label>
+                    <input
+                      type="email"
+                      className="input-field"
+                      value={editingProfile.email_recovery || ''}
+                      onChange={(e) => setEditingProfile({ ...editingProfile, email_recovery: e.target.value })}
                     />
                   </div>
                   <div className="form-group">

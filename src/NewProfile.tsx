@@ -37,6 +37,7 @@ const NewProfile: React.FC = () => {
     description_html: '',
     gmail: '',
     gmail_password: '',
+    email_recovery: '',
     profile_email: '',
     profile_email_password: '',
     bio: '',
@@ -320,6 +321,11 @@ const NewProfile: React.FC = () => {
               <div className="form-group">
                 <label>Contraseña Gmail</label>
                 <input type="password" className="input-field" name="gmail_password" value={formData.gmail_password} onChange={handleChange} placeholder="••••••••" />
+              </div>
+
+              <div className="form-group">
+                <label>Correo de Recuperación (Gmail)</label>
+                <input type="email" className="input-field" name="email_recovery" value={formData.email_recovery} onChange={handleChange} placeholder="recuperacion@gmail.com" />
               </div>
 
               <div className="form-group">
