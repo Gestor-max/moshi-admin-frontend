@@ -8,6 +8,7 @@ import Register from './Register';
 import Dashboard from './Dashboard';
 import Profiles from './Profiles';
 import NewProfile from './NewProfile';
+import ProfileActivities from './ProfileActivities';
 import Proxies from './Proxies';
 import NewProxy from './NewProxy';
 import Websites from './Websites';
@@ -52,6 +53,7 @@ function App() {
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/profiles" element={<ProtectedRoute><Profiles /></ProtectedRoute>} />
             <Route path="/profiles/new" element={<ProtectedRoute><NewProfile /></ProtectedRoute>} />
+            <Route path="/profiles/:profileId/activities" element={<ProtectedRoute><ProfileActivities /></ProtectedRoute>} />
             <Route path="/proxies" element={<ProtectedRoute><Proxies /></ProtectedRoute>} />
             <Route path="/proxies/new" element={<ProtectedRoute><NewProxy /></ProtectedRoute>} />
             <Route path="/linked-profiles" element={<ProtectedRoute><LinkedProfiles /></ProtectedRoute>} />

@@ -49,6 +49,8 @@ const NewProfile: React.FC = () => {
     gender: 'M',
     time_zone: 'America/Mexico_City',
     proxy_id: '',
+    two_fa: '',
+    telefono: '',
   });
 
   // Empleo fields
@@ -336,6 +338,16 @@ const NewProfile: React.FC = () => {
               <div className="form-group">
                 <label>Contraseña Correo Perfil</label>
                 <input type="password" className="input-field" name="profile_email_password" value={formData.profile_email_password} onChange={handleChange} placeholder="••••••••" />
+              </div>
+
+              <div className="form-group">
+                <label>Código 2FA (Opcional)</label>
+                <input type="text" className="input-field" name="two_fa" value={formData.two_fa} onChange={handleChange} placeholder="Ej: JBSWY3DPEHPK3PXP" />
+              </div>
+
+              <div className="form-group">
+                <label>Teléfono (Opcional)</label>
+                <input type="text" className="input-field" name="telefono" value={formData.telefono} onChange={handleChange} placeholder="Ej: +52 55 1234 5678" />
               </div>
             </div>
           )}

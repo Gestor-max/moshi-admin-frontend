@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from './api';
 import { useLanguage } from './LanguageContext';
-import { UserCheck, Plus, Search, Trash2, Edit2, X, Save, AlertCircle, Link as LinkIcon, Briefcase, GraduationCap, MapPin, Key, User } from 'lucide-react';
+import { UserCheck, Plus, Search, Trash2, Edit2, X, Save, AlertCircle, Link as LinkIcon, Briefcase, GraduationCap, MapPin, Key, User, ListChecks } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 interface ProxyItem {
@@ -56,6 +56,8 @@ interface ProfileItem {
   empleo?: string;
   educacion?: string;
   ubicacion?: string;
+  two_fa?: string;
+  telefono?: string;
   proxy?: ProxyItem;
   profile_websites?: ProfileWebsiteAccount[];
 }
@@ -84,6 +86,8 @@ const Profiles: React.FC = () => {
   const [sitePassword, setSitePassword] = useState('');
   const [siteCookie, setSiteCookie] = useState('');
   const [modalError, setModalError] = useState('');
+
+
 
   const fetchProfiles = async (searchQuery = '') => {
     try {
@@ -302,6 +306,14 @@ const Profiles: React.FC = () => {
                   </td>
                   <td style={{ padding: '1rem', textAlign: 'right' }}>
                     <div style={{ display: 'inline-flex', gap: '0.4rem', justifyContent: 'flex-end' }}>
+                      <Link
+                        to={`/profiles/${p.id}/activities`}
+                        className="btn btn-secondary"
+                        style={{ padding: '0.35rem 0.6rem', fontSize: '0.8rem', background: '#2563eb', color: 'white', borderColor: '#2563eb', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+                        title="Ver y Gestionar Actividades"
+                      >
+                        <ListChecks size={14} /> Actividades
+                      </Link>
                       <button
                         className="btn btn-secondary"
                         style={{ padding: '0.35rem 0.6rem', fontSize: '0.8rem' }}
@@ -687,6 +699,26 @@ const Profiles: React.FC = () => {
                       className="input-field"
                       value={editingProfile.profile_email_password || ''}
                       onChange={(e) => setEditingProfile({ ...editingProfile, profile_email_password: e.target.value })}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Código 2FA (Opcional)</label>
+                    <input
+                      type="text"
+                      className="input-field"
+                      value={editingProfile.two_fa || ''}
+                      onChange={(e) => setEditingProfile({ ...editingProfile, two_fa: e.target.value })}
+                      placeholder="Ej: JBSWY3DPEHPK3PXP"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Teléfono (Opcional)</label>
+                    <input
+                      type="text"
+                      className="input-field"
+                      value={editingProfile.telefono || ''}
+                      onChange={(e) => setEditingProfile({ ...editingProfile, telefono: e.target.value })}
+                      placeholder="Ej: +52 55 1234 5678"
                     />
                   </div>
                 </div>
