@@ -8,9 +8,11 @@ import Register from './Register';
 import Dashboard from './Dashboard';
 import Profiles from './Profiles';
 import NewProfile from './NewProfile';
+import EditProfile from './EditProfile';
 import ProfileActivities from './ProfileActivities';
 import Proxies from './Proxies';
 import NewProxy from './NewProxy';
+import Locations from './Locations';
 import Websites from './Websites';
 import LinkedProfiles from './LinkedProfiles';
 import Automations from './Automations';
@@ -53,9 +55,11 @@ function App() {
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/profiles" element={<ProtectedRoute><Profiles /></ProtectedRoute>} />
             <Route path="/profiles/new" element={<ProtectedRoute><NewProfile /></ProtectedRoute>} />
+            <Route path="/profiles/:profileId/edit" element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />
             <Route path="/profiles/:profileId/activities" element={<ProtectedRoute><ProfileActivities /></ProtectedRoute>} />
             <Route path="/proxies" element={<ProtectedRoute><Proxies /></ProtectedRoute>} />
             <Route path="/proxies/new" element={<ProtectedRoute><NewProxy /></ProtectedRoute>} />
+            <Route path="/locations" element={<ProtectedRoute><Locations /></ProtectedRoute>} />
             <Route path="/linked-profiles" element={<ProtectedRoute><LinkedProfiles /></ProtectedRoute>} />
             <Route path="/automations" element={<ProtectedRoute><Automations /></ProtectedRoute>} />
             <Route path="/websites" element={<AdminRoute><Websites /></AdminRoute>} />

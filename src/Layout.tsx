@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { useLanguage } from './LanguageContext';
-import { Home, UserCheck, Server, User, LogOut, Bot, Globe, Users, Menu, X, Link as LinkIcon, PlayCircle, Languages } from 'lucide-react';
+import { Home, UserCheck, Server, User, LogOut, Bot, Globe, Users, Menu, X, Link as LinkIcon, PlayCircle, Languages, MapPin } from 'lucide-react';
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { logout, isAdmin } = useAuth();
@@ -95,6 +95,9 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           </NavLink>
           <NavLink to="/proxies" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={closeSidebar}>
             <Server size={18} /> {t('nav_proxies')}
+          </NavLink>
+          <NavLink to="/locations" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={closeSidebar}>
+            <MapPin size={18} /> {t('nav_locations') || 'Ubicaciones'}
           </NavLink>
           <NavLink to="/linked-profiles" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={closeSidebar}>
             <LinkIcon size={18} /> {t('nav_linked')}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from './api';
 import { useLanguage } from './LanguageContext';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useParams, Link } from 'react-router-dom';
 import { UserCheck, Save, ArrowLeft, Briefcase, GraduationCap, MapPin, Key, User } from 'lucide-react';
 
 interface ProxyItem {
@@ -19,13 +19,15 @@ interface LocationItem {
 
 type TabType = 'basica' | 'credenciales' | 'empleo' | 'educacion' | 'ubicacion';
 
-const NewProfile: React.FC = () => {
+const EditProfile: React.FC = () => {
   const { t } = useLanguage();
   const navigate = useNavigate();
+  const { profileId } = useParams<{ profileId: string }>();
 
   const [proxies, setProxies] = useState<ProxyItem[]>([]);
   const [locations, setLocations] = useState<LocationItem[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<TabType>('basica');
 
@@ -90,18 +92,68 @@ const NewProfile: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [resProxies, resLocs] = await Promise.all([
+        const [resProfile, resProxies, resLocs] = await Promise.all([
+          api.get(`/profiles/${profileId}`),
           api.get('/proxies'),
           api.get('/locations'),
         ]);
+
+        const prof = resProfile.data;
+        if (prof) {
+          setFormData({
+            name: prof.name || '',
+            lastname: prof.lastname || '',
+            username: prof.username || '',
+            website: prof.website || '',
+            pronouns: prof.pronouns || "Don't specify",
+            company_basic: prof.company_basic || '',
+            location_basic: prof.location_basic || '',
+            social_accounts: prof.social_accounts || '{"x.com":"", "facebook.com":""}',
+            topic_about_you: prof.topic_about_you || '',
+            profile_credential: prof.profile_credential || '',
+            description_html: prof.description_html || '',
+            gmail: prof.gmail || '',
+            gmail_password: prof.gmail_password || '',
+            email_recovery: prof.email_recovery || '',
+            profile_email: prof.profile_email || '',
+            profile_email_password: prof.profile_email_password || '',
+            bio: prof.bio || '',
+            img: prof.img || '',
+            pais_iso: prof.pais_iso || 'MEX',
+            mes_nac: prof.mes_nac || 1,
+            year_nac: prof.year_nac || 2000,
+            day_nac: prof.day_nac || 1,
+            gender: prof.gender || 'M',
+            time_zone: prof.time_zone || 'America/Mexico_City',
+            proxy_id: prof.proxy_id ? String(prof.proxy_id) : '',
+            location_id: prof.location_id ? String(prof.location_id) : '',
+            two_fa: prof.two_fa || '',
+            telefono: prof.telefono || '',
+          });
+
+          try {
+            if (prof.empleo) setEmpleo(JSON.parse(prof.empleo));
+          } catch {}
+
+          try {
+            if (prof.educacion) setEducacion(JSON.parse(prof.educacion));
+          } catch {}
+
+          try {
+            if (prof.ubicacion) setUbicacion(JSON.parse(prof.ubicacion));
+          } catch {}
+        }
         setProxies(resProxies.data);
         setLocations(resLocs.data);
       } catch (err) {
         console.error(err);
+        setError('Error al cargar la información del perfil.');
+      } finally {
+        setLoading(false);
       }
     };
     fetchData();
-  }, []);
+  }, [profileId]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -116,12 +168,12 @@ const NewProfile: React.FC = () => {
       return;
     }
 
-    setLoading(true);
+    setSaving(true);
     setError('');
 
     try {
-      await api.post(
-        '/profiles',
+      await api.patch(
+        `/profiles/${profileId}`,
         {
           ...formData,
           mes_nac: Number(formData.mes_nac) || 1,
@@ -137,11 +189,19 @@ const NewProfile: React.FC = () => {
       navigate('/profiles');
     } catch (err: any) {
       console.error(err);
-      setError(err.response?.data?.message || 'Error al crear el perfil');
+      setError(err.response?.data?.message || 'Error al actualizar el perfil');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="dashboard" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+        <div>{t('loading') || 'Cargando perfil...'}</div>
+      </div>
+    );
+  }
 
   return (
     <div className="dashboard">
@@ -155,9 +215,9 @@ const NewProfile: React.FC = () => {
             <UserCheck size={24} />
           </div>
           <div>
-            <h1 style={{ margin: 0, fontSize: '1.5rem' }}>Crear Nuevo Perfil</h1>
+            <h1 style={{ margin: 0, fontSize: '1.5rem' }}>Editar Perfil #{profileId}: {formData.name} {formData.lastname}</h1>
             <p className="subtitle" style={{ margin: 0, textAlign: 'left' }}>
-              Los campos Nombre y Apellido son obligatorios. El resto de la información es opcional.
+              Modifica la información general, credenciales, experiencia laboral, educación y ubicación del perfil.
             </p>
           </div>
         </div>
@@ -403,25 +463,25 @@ const NewProfile: React.FC = () => {
               </div>
 
               <div className="form-group">
-                <label>Start Year (Año Inicio)</label>
+                <label>Start Year (Año de Inicio)</label>
                 <input
                   type="text"
                   className="input-field"
-                  placeholder="ej. 2021"
+                  placeholder="ej. 2018"
                   value={empleo.start_year}
                   onChange={(e) => setEmpleo({ ...empleo, start_year: e.target.value })}
                 />
               </div>
 
               <div className="form-group">
-                <label>End Year (Año Fin)</label>
+                <label>End Year (Año de Fin)</label>
                 <input
                   type="text"
                   className="input-field"
-                  placeholder="ej. Present"
-                  value={empleo.currently_work_here ? 'Present' : empleo.end_year}
-                  disabled={empleo.currently_work_here}
+                  placeholder="ej. 2023 o Present"
+                  value={empleo.end_year}
                   onChange={(e) => setEmpleo({ ...empleo, end_year: e.target.value })}
+                  disabled={empleo.currently_work_here}
                 />
               </div>
 
@@ -432,7 +492,7 @@ const NewProfile: React.FC = () => {
                   checked={empleo.currently_work_here}
                   onChange={(e) => setEmpleo({ ...empleo, currently_work_here: e.target.checked })}
                 />
-                <label htmlFor="currently_work_here" style={{ margin: 0, cursor: 'pointer' }}>I currently work here (Trabajo actualmente aquí)</label>
+                <label htmlFor="currently_work_here" style={{ margin: 0, cursor: 'pointer' }}>I currently work here (Trabajo aquí actualmente)</label>
               </div>
             </div>
           )}
@@ -441,18 +501,18 @@ const NewProfile: React.FC = () => {
           {activeTab === 'educacion' && (
             <div className="card" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
               <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                <label>School / Universidad</label>
+                <label>School / University (Escuela o Universidad)</label>
                 <input
                   type="text"
                   className="input-field"
-                  placeholder="ej. University of Texas at Austin"
+                  placeholder="ej. Universidad Nacional Autónoma de México"
                   value={educacion.school}
                   onChange={(e) => setEducacion({ ...educacion, school: e.target.value })}
                 />
               </div>
 
               <div className="form-group">
-                <label>Primary Major (Carrera Principal)</label>
+                <label>Primary Major (Carrera Principal / Especialidad)</label>
                 <input
                   type="text"
                   className="input-field"
@@ -467,14 +527,14 @@ const NewProfile: React.FC = () => {
                 <input
                   type="text"
                   className="input-field"
-                  placeholder="ej. Business"
+                  placeholder="ej. Mathematics"
                   value={educacion.secondary_major}
                   onChange={(e) => setEducacion({ ...educacion, secondary_major: e.target.value })}
                 />
               </div>
 
               <div className="form-group">
-                <label>Degree Type (Tipo de Grado)</label>
+                <label>Degree Type (Tipo de Grado / Titulación)</label>
                 <input
                   type="text"
                   className="input-field"
@@ -489,7 +549,7 @@ const NewProfile: React.FC = () => {
                 <input
                   type="text"
                   className="input-field"
-                  placeholder="ej. 2020"
+                  placeholder="ej. 2021"
                   value={educacion.graduation_year}
                   onChange={(e) => setEducacion({ ...educacion, graduation_year: e.target.value })}
                 />
@@ -501,7 +561,7 @@ const NewProfile: React.FC = () => {
           {activeTab === 'ubicacion' && (
             <div className="card" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
               <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                <label>Location (Ubicación) <span style={{ color: 'var(--error)' }}>*</span></label>
+                <label>Location (Ciudad, Estado, País)</label>
                 <input
                   type="text"
                   className="input-field"
@@ -512,7 +572,7 @@ const NewProfile: React.FC = () => {
               </div>
 
               <div className="form-group">
-                <label>Start Year (Año Inicio)</label>
+                <label>Start Year (Año de Inicio de Residencia)</label>
                 <input
                   type="text"
                   className="input-field"
@@ -523,14 +583,14 @@ const NewProfile: React.FC = () => {
               </div>
 
               <div className="form-group">
-                <label>End Year (Año Fin)</label>
+                <label>End Year (Año de Fin de Residencia)</label>
                 <input
                   type="text"
                   className="input-field"
-                  placeholder="ej. Present"
-                  disabled={ubicacion.currently_live_here}
-                  value={ubicacion.currently_live_here ? 'Present' : ubicacion.end_year}
+                  placeholder="ej. 2022 o Present"
+                  value={ubicacion.end_year}
                   onChange={(e) => setUbicacion({ ...ubicacion, end_year: e.target.value })}
+                  disabled={ubicacion.currently_live_here}
                 />
               </div>
 
@@ -541,28 +601,18 @@ const NewProfile: React.FC = () => {
                   checked={ubicacion.currently_live_here}
                   onChange={(e) => setUbicacion({ ...ubicacion, currently_live_here: e.target.checked })}
                 />
-                <label htmlFor="currently_live_here" style={{ margin: 0, cursor: 'pointer' }}>I currently live here (Resido actualmente aquí)</label>
+                <label htmlFor="currently_live_here" style={{ margin: 0, cursor: 'pointer' }}>I currently live here (Vivo aquí actualmente)</label>
               </div>
             </div>
           )}
 
-          {/* BOTONES FIJOS Y RENDEREADOS SIEMPRE */}
-          <div style={{ marginTop: '1.5rem', display: 'flex', gap: '1rem', justifyContent: 'flex-end', alignItems: 'center' }}>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => navigate('/profiles')}
-              disabled={loading}
-            >
+          {/* BOTONES DE ACCIÓN */}
+          <div style={{ marginTop: '1.5rem', display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+            <Link to="/profiles" className="btn btn-secondary">
               Cancelar
-            </button>
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={loading}
-              style={{ minWidth: '160px' }}
-            >
-              <Save size={18} /> {loading ? 'Guardando...' : 'Guardar Perfil'}
+            </Link>
+            <button type="submit" className="btn btn-primary" disabled={saving} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Save size={18} /> {saving ? 'Guardando...' : 'Guardar Cambios'}
             </button>
           </div>
         </form>
@@ -571,4 +621,4 @@ const NewProfile: React.FC = () => {
   );
 };
 
-export default NewProfile;
+export default EditProfile;

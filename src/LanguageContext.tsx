@@ -8,10 +8,19 @@ export const translations = {
     nav_dashboard: "Panel Principal",
     nav_profiles: "Perfiles",
     nav_proxies: "Proxies",
+    nav_locations: "Ubicaciones",
     nav_websites: "Sitios Web",
     nav_linked: "Vínculos",
     nav_automations: "Automatizaciones",
     logout: "Cerrar Sesión",
+
+    // Locations
+    locations_title: "Gestión de Ubicaciones",
+    locations_subtitle: "Administra estados y ubicaciones para asignar a tus perfiles.",
+    new_location: "Nueva Ubicación",
+    edit_location: "Editar Ubicación",
+    state_label: "Estado / Provincia",
+    location_label: "Ciudad / Ubicación",
     
     // Actions & General Buttons
     create: "Crear",
