@@ -1,460 +1,164 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { api } from './api';
-import { useLanguage } from './LanguageContext';
-import { UserCheck, Plus, Search, Trash2, Edit2, X, Save, AlertCircle, Link as LinkIcon, Briefcase, GraduationCap, MapPin, Key, User, ListChecks } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { useAuth } from './AuthContext';
+import { User, Mail, Lock, ShieldCheck, Save } from 'lucide-react';
 
-interface ProxyItem {
-  id: number;
-  ip: string;
-  port: string;
-  username: string;
-}
+const Profile: React.FC = () => {
+  const { user, token, login } = useAuth();
+  const [name, setName] = useState(user?.name || '');
+  const [email, setEmail] = useState(user?.email || '');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const [loading, setLoading] = useState(false);
 
-interface WebsiteItem {
-  id: number;
-  name: string;
-  url: string;
-}
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setMessage(null);
 
-interface LocationItem {
-  id: number;
-  state: string;
-  location: string;
-}
+    if (password && password !== confirmPassword) {
+      setMessage({ type: 'error', text: 'Las contraseñas no coinciden' });
+      return;
+    }
 
-interface ProfileWebsiteAccount {
-  id: number;
-  website_id: number;
-  email: string;
-  password: string;
-  cookie?: string;
-  website?: WebsiteItem;
-}
-
-interface ProfileItem {
-  id: number;
-  name: string;
-  lastname: string;
-  username?: string;
-  website?: string;
-  pronouns?: string;
-  company_basic?: string;
-  location_basic?: string;
-  social_accounts?: string;
-  topic_about_you?: string;
-  profile_credential?: string;
-  description_html?: string;
-  gmail?: string;
-  gmail_password?: string;
-  email_recovery?: string;
-  profile_email?: string;
-  profile_email_password?: string;
-  bio?: string;
-  img?: string;
-  pais_iso?: string;
-  mes_nac?: number;
-  year_nac?: number;
-  day_nac?: number;
-  gender?: string;
-  time_zone?: string;
-  proxy_id?: number | null;
-  location_id?: number | null;
-  empleo?: string;
-  educacion?: string;
-  ubicacion?: string;
-  two_fa?: string;
-  telefono?: string;
-  proxy?: ProxyItem;
-  location?: LocationItem;
-  profile_websites?: ProfileWebsiteAccount[];
-}
-
-type TabType = 'basica' | 'credenciales' | 'empleo' | 'educacion' | 'ubicacion';
-
-const Profiles: React.FC = () => {
-  const { t } = useLanguage();
-  const [profiles, setProfiles] = useState<ProfileItem[]>([]);
-  const [proxies, setProxies] = useState<ProxyItem[]>([]);
-  const [locations, setLocations] = useState<LocationItem[]>([]);
-  const [websites, setWebsites] = useState<WebsiteItem[]>([]);
-  const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [editingProfile, setEditingProfile] = useState<ProfileItem | null>(null);
-  const [editTab, setEditTab] = useState<TabType>('basica');
-
-  // Json edit states
-  const [editEmpleo, setEditEmpleo] = useState({ position: '', company: '', start_year: '', end_year: '', currently_work_here: true });
-  const [editEducacion, setEditEducacion] = useState({ school: '', primary_major: '', secondary_major: '', degree_type: '', graduation_year: '' });
-  const [editUbicacion, setEditUbicacion] = useState({ location: '', start_year: '', end_year: '', currently_live_here: true });
-
-  // Quick Modal for adding a website account to a specific profile
-  const [addingSiteToProfile, setAddingSiteToProfile] = useState<ProfileItem | null>(null);
-  const [selectedWebsiteId, setSelectedWebsiteId] = useState('');
-  const [siteEmail, setSiteEmail] = useState('');
-  const [sitePassword, setSitePassword] = useState('');
-  const [siteCookie, setSiteCookie] = useState('');
-  const [modalError, setModalError] = useState('');
-
-
-
-  const fetchProfiles = async (searchQuery = '') => {
+    setLoading(true);
     try {
-      const res = await api.get(`/profiles${searchQuery ? `?search=${searchQuery}` : ''}`);
-      setProfiles(res.data);
-    } catch (err) {
+      const payload: any = { name, email };
+      if (password) payload.password = password;
+
+      const res = await api.patch('/auth/profile', payload);
+
+      login(token!, { ...user!, ...res.data });
+      setMessage({ type: 'success', text: '¡Perfil actualizado con éxito!' });
+      setPassword('');
+      setConfirmPassword('');
+    } catch (err: any) {
       console.error(err);
+      setMessage({ type: 'error', text: err.response?.data?.message || 'Error al actualizar el perfil.' });
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchProxies = async () => {
-    try {
-      const res = await api.get('/proxies');
-      setProxies(res.data);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const fetchLocations = async () => {
-    try {
-      const res = await api.get('/locations');
-      setLocations(res.data);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const fetchWebsites = async () => {
-    try {
-      const res = await api.get('/websites');
-      setWebsites(res.data);
-      if (res.data.length > 0) {
-        setSelectedWebsiteId(String(res.data[0].id));
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  useEffect(() => {
-    fetchProfiles();
-    fetchProxies();
-    fetchLocations();
-    fetchWebsites();
-  }, []);
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    fetchProfiles(search);
-  };
-
-  const handleDelete = async (id: number) => {
-    if (!window.confirm('¿Estás seguro de eliminar este perfil?')) return;
-    try {
-      await api.delete(`/profiles/${id}`);
-      fetchProfiles(search);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const startEditProfile = (profile: ProfileItem) => {
-    setEditingProfile(profile);
-    setEditTab('basica');
-
-    try {
-      setEditEmpleo(profile.empleo ? JSON.parse(profile.empleo) : { position: '', company: '', start_year: '', end_year: '', currently_work_here: true });
-    } catch {
-      setEditEmpleo({ position: '', company: '', start_year: '', end_year: '', currently_work_here: true });
-    }
-
-    try {
-      setEditEducacion(profile.educacion ? JSON.parse(profile.educacion) : { school: '', primary_major: '', secondary_major: '', degree_type: '', graduation_year: '' });
-    } catch {
-      setEditEducacion({ school: '', primary_major: '', secondary_major: '', degree_type: '', graduation_year: '' });
-    }
-
-    try {
-      setEditUbicacion(profile.ubicacion ? JSON.parse(profile.ubicacion) : { location: '', start_year: '', end_year: '', currently_live_here: true });
-    } catch {
-      setEditUbicacion({ location: '', start_year: '', end_year: '', currently_live_here: true });
-    }
-  };
-
-  const handleUpdateProfile = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingProfile) return;
-
-    if (!editingProfile.name?.trim() || !editingProfile.lastname?.trim()) {
-      alert('Nombre y Apellido son requeridos');
-      setEditTab('basica');
-      return;
-    }
-
-    try {
-      await api.patch(`/profiles/${editingProfile.id}`, {
-          ...editingProfile,
-          proxy_id: editingProfile.proxy_id ? Number(editingProfile.proxy_id) : null,
-          location_id: editingProfile.location_id ? Number(editingProfile.location_id) : null,
-          empleo: JSON.stringify(editEmpleo),
-          educacion: JSON.stringify(editEducacion),
-          ubicacion: JSON.stringify(editUbicacion),
-        });
-      setEditingProfile(null);
-      fetchProfiles(search);
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Error al actualizar perfil');
-    }
-  };
-
-  const openAddSiteModal = (profile: ProfileItem) => {
-    setAddingSiteToProfile(profile);
-    setSiteEmail(profile.profile_email || profile.gmail || '');
-    setSitePassword('');
-    setSiteCookie('');
-    setModalError('');
-  };
-
-  const handleCreateProfileSiteAccount = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!addingSiteToProfile || !selectedWebsiteId) return;
-    setModalError('');
-
-    try {
-      await api.post('/websites/accounts', {
-          profile_id: addingSiteToProfile.id,
-          website_id: Number(selectedWebsiteId),
-          email: siteEmail,
-          password: sitePassword,
-          cookie: siteCookie,
-        });
-
-      setAddingSiteToProfile(null);
-      fetchProfiles(search);
-    } catch (err: any) {
-      setModalError(err.response?.data?.message || 'Error al vincular sitio web al perfil.');
-    }
-  };
-
-
-
   return (
     <div className="dashboard">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-        <div>
-          <h1>{t('profiles_title')}</h1>
-          <p className="subtitle" style={{ textAlign: 'left', margin: 0 }}>
-            {t('profiles_subtitle')}
-          </p>
-        </div>
-        <Link to="/profiles/new" className="btn btn-primary">
-          <Plus size={18} /> {t('new_profile')}
-        </Link>
-      </div>
-
-      {/* Buscador */}
-      <form onSubmit={handleSearch} style={{ marginBottom: '1.5rem', display: 'flex', gap: '0.75rem' }}>
-        <div style={{ position: 'relative', width: '100%', maxWidth: '400px' }}>
-          <Search size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-          <input
-            type="text"
-            className="input-field"
-            style={{ paddingLeft: '2.75rem' }}
-            placeholder="Buscar por nombre, correo..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-        <button type="submit" className="btn btn-secondary">
-          Buscar
-        </button>
-      </form>
-
-      {/* VISTA EN FORMATO DE TABLA */}
-      {loading ? (
-        <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-          {t('loading')}
-        </div>
-      ) : profiles.length === 0 ? (
-        <div className="card" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-          <UserCheck size={48} style={{ margin: '0 auto 1rem', opacity: 0.4 }} />
-          <h3>{t('profiles_empty_title')}</h3>
-          <p style={{ margin: '0.5rem 0 1.5rem' }}>{t('profiles_empty_text')}</p>
-          <Link to="/profiles/new" className="btn btn-primary">
-            <Plus size={18} /> {t('new_profile')}
-          </Link>
-        </div>
-      ) : (
-        <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
-          <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-            <thead>
-              <tr style={{ background: 'var(--surface-hover)', borderBottom: '1px solid var(--border)' }}>
-                <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>ID</th>
-                <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Nombre Completo</th>
-                <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Gmail</th>
-                <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Proxy Asignado</th>
-                <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Ubicación</th>
-                <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>País</th>
-                <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'right' }}>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {profiles.map((p) => (
-                <tr key={p.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                  <td style={{ padding: '1rem', fontSize: '0.875rem', fontWeight: 600 }}>#{p.id}</td>
-                  <td style={{ padding: '1rem' }}>
-                    <div style={{ fontWeight: 600, color: 'var(--text)' }}>
-                      {p.name} {p.lastname}
-                    </div>
-                  </td>
-                  <td style={{ padding: '1rem', fontSize: '0.875rem', color: 'var(--text-muted)' }}>
-                    {p.gmail || '-'}
-                  </td>
-                  <td style={{ padding: '1rem', fontSize: '0.85rem' }}>
-                    {p.proxy ? (
-                      <span className="badge" style={{ background: 'rgba(168, 85, 247, 0.15)', color: '#a855f7' }}>
-                        {p.proxy.ip}:{p.proxy.port}
-                      </span>
-                    ) : (
-                      <span style={{ color: 'var(--text-muted)' }}>Sin Proxy</span>
-                    )}
-                  </td>
-                  <td style={{ padding: '1rem', fontSize: '0.85rem' }}>
-                    {p.location ? (
-                      <span className="badge" style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6' }}>
-                        {p.location.location} ({p.location.state})
-                      </span>
-                    ) : (
-                      <span style={{ color: 'var(--text-muted)' }}>Sin Ubicación</span>
-                    )}
-                  </td>
-                  <td style={{ padding: '1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                    {p.pais_iso || '-'}
-                  </td>
-                  <td style={{ padding: '1rem', textAlign: 'right' }}>
-                    <div style={{ display: 'inline-flex', gap: '0.4rem', justifyContent: 'flex-end' }}>
-                      <Link
-                        to={`/profiles/${p.id}/activities`}
-                        className="btn btn-secondary"
-                        style={{ padding: '0.35rem 0.6rem', fontSize: '0.8rem', background: '#2563eb', color: 'white', borderColor: '#2563eb', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
-                        title="Ver y Gestionar Actividades"
-                      >
-                        <ListChecks size={14} /> Actividades
-                      </Link>
-                      <button
-                        className="btn btn-secondary"
-                        style={{ padding: '0.35rem 0.6rem', fontSize: '0.8rem' }}
-                        title="Vincular Sitio Web"
-                        onClick={() => openAddSiteModal(p)}
-                      >
-                        <LinkIcon size={14} /> Vincular
-                      </button>
-                      <Link
-                        to={`/profiles/${p.id}/edit`}
-                        className="btn btn-secondary"
-                        style={{ padding: '0.35rem 0.6rem', fontSize: '0.8rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
-                        title="Editar Perfil"
-                      >
-                        <Edit2 size={14} /> Editar
-                      </Link>
-                      <button
-                        className="btn btn-danger"
-                        style={{ padding: '0.35rem 0.6rem', fontSize: '0.8rem' }}
-                        title="Eliminar Perfil"
-                        onClick={() => handleDelete(p.id)}
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* Modal para Vincular Sitio Web */}
-      {addingSiteToProfile && (
-        <div className="modal-backdrop">
-          <div className="modal-content" style={{ maxWidth: '450px' }}>
-            <div className="modal-header">
-              <h2>Vincular Sitio Web a {addingSiteToProfile.name}</h2>
-              <button className="modal-close" onClick={() => setAddingSiteToProfile(null)}>
-                <X size={20} />
-              </button>
-            </div>
-            {modalError && (
-              <div className="error-message" style={{ margin: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <AlertCircle size={18} /> {modalError}
-              </div>
-            )}
-            <form onSubmit={handleCreateProfileSiteAccount} className="modal-body">
-              <div className="form-group">
-                <label>Selecciona Sitio Web</label>
-                <select
-                  className="input-field"
-                  value={selectedWebsiteId}
-                  onChange={(e) => setSelectedWebsiteId(e.target.value)}
-                  required
-                >
-                  {websites.map((w) => (
-                    <option key={w.id} value={w.id}>
-                      {w.name} ({w.url})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label>Email o Usuario en Sitio Web</label>
-                <input
-                  type="email"
-                  className="input-field"
-                  value={siteEmail}
-                  onChange={(e) => setSiteEmail(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Contraseña en Sitio Web</label>
-                <input
-                  type="password"
-                  className="input-field"
-                  value={sitePassword}
-                  onChange={(e) => setSitePassword(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Cookie (Opcional)</label>
-                <textarea
-                  className="input-field"
-                  value={siteCookie}
-                  onChange={(e) => setSiteCookie(e.target.value)}
-                  rows={2}
-                />
-              </div>
-
-              <div className="modal-footer" style={{ padding: 0, marginTop: '1.5rem' }}>
-                <button type="button" className="btn btn-secondary" onClick={() => setAddingSiteToProfile(null)}>
-                  Cancelar
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  <Save size={18} /> Vincular Sitio
-                </button>
-              </div>
-            </form>
+      <div style={{ maxWidth: '800px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
+          <div style={{ background: 'var(--primary-light)', padding: '0.75rem', borderRadius: '0.375rem', color: 'var(--primary)' }}>
+            <User size={28} />
+          </div>
+          <div>
+            <h1 style={{ margin: 0 }}>Mi Perfil</h1>
+            <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.875rem' }}>Administra tu información personal y seguridad</p>
           </div>
         </div>
-      )}
+
+        {message && (
+          <div className="error-message" style={{
+            color: message.type === 'success' ? 'var(--success)' : 'var(--error)',
+            background: message.type === 'success' ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
+            borderColor: message.type === 'success' ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            justifyContent: 'center',
+            border: '1px solid'
+          }}>
+            {message.type === 'success' ? <ShieldCheck size={18} /> : <XIcon size={18} />}
+            {message.text}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="profile-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginTop: '1.5rem' }}>
+          <div className="container" style={{ margin: 0, maxWidth: 'none', padding: '1.5rem' }}>
+            <h3 style={{ marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1rem' }}>
+              <User size={18} color="var(--primary)" /> Datos Personales
+            </h3>
+            <div className="form-group">
+              <label>Nombre Completo</label>
+              <div style={{ position: 'relative' }}>
+                <User size={16} style={{ position: 'absolute', left: '0.875rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  style={{ paddingLeft: '2.75rem' }}
+                  placeholder="Tu nombre"
+                  required
+                />
+              </div>
+            </div>
+            <div className="form-group">
+              <label>Correo Electrónico</label>
+              <div style={{ position: 'relative' }}>
+                <Mail size={16} style={{ position: 'absolute', left: '0.875rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  style={{ paddingLeft: '2.75rem' }}
+                  placeholder="correo@ejemplo.com"
+                  required
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="container" style={{ margin: 0, maxWidth: 'none', padding: '1.5rem' }}>
+            <h3 style={{ marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1rem' }}>
+              <Lock size={18} color="var(--primary)" /> Seguridad
+            </h3>
+            <div className="form-group">
+              <label>Nueva Contraseña (Opcional)</label>
+              <div style={{ position: 'relative' }}>
+                <Lock size={16} style={{ position: 'absolute', left: '0.875rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  style={{ paddingLeft: '2.75rem' }}
+                  placeholder="••••••••"
+                />
+              </div>
+            </div>
+            <div className="form-group">
+              <label>Confirmar Contraseña</label>
+              <div style={{ position: 'relative' }}>
+                <Lock size={16} style={{ position: 'absolute', left: '0.875rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  style={{ paddingLeft: '2.75rem' }}
+                  placeholder="••••••••"
+                />
+              </div>
+            </div>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Deja estos campos vacíos si no deseas cambiar tu contraseña.</p>
+          </div>
+
+          <div className="span-2" style={{ gridColumn: 'span 2' }}>
+            <button type="submit" disabled={loading} style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem',
+              opacity: loading ? 0.7 : 1
+            }}>
+              <Save size={18} /> {loading ? 'Actualizando...' : 'Guardar Cambios'}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 };
 
-export default Profiles;
+const XIcon: React.FC<{ size?: number }> = ({ size = 20 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="18" y1="6" x2="6" y2="18"></line>
+    <line x1="6" y1="6" x2="18" y2="18"></line>
+  </svg>
+);
+
+export default Profile;
