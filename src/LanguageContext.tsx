@@ -150,10 +150,19 @@ export const translations = {
     nav_dashboard: "Dashboard",
     nav_profiles: "Profiles",
     nav_proxies: "Proxies",
+    nav_locations: "Locations",
     nav_websites: "Websites",
     nav_linked: "Linked Profiles",
     nav_automations: "Automations",
     logout: "Log Out",
+
+    // Locations
+    locations_title: "Location Management",
+    locations_subtitle: "Manage states and locations to assign to your profiles.",
+    new_location: "New Location",
+    edit_location: "Edit Location",
+    state_label: "State / Province",
+    location_label: "City / Location",
     
     // Actions & General Buttons
     create: "Create",
