@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { useLanguage } from './LanguageContext';
-import { Home, UserCheck, Server, User, LogOut, Bot, Globe, Users, Menu, X, Link as LinkIcon, PlayCircle, Languages, MapPin } from 'lucide-react';
+import { Home, UserCheck, Server, User, LogOut, Bot, Globe, Users, Menu, X, Link as LinkIcon, PlayCircle, Languages, MapPin, Archive, Tag, Layers } from 'lucide-react';
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { logout, isAdmin } = useAuth();
@@ -93,11 +93,20 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           <NavLink to="/profiles" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={closeSidebar}>
             <UserCheck size={18} /> {t('nav_profiles')}
           </NavLink>
+          <NavLink to="/profiles/archived" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={closeSidebar}>
+            <Archive size={18} /> {t('nav_archived_profiles')}
+          </NavLink>
+          <NavLink to="/tags" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={closeSidebar}>
+            <Tag size={18} /> {t('nav_tags')}
+          </NavLink>
           <NavLink to="/proxies" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={closeSidebar}>
             <Server size={18} /> {t('nav_proxies')}
           </NavLink>
           <NavLink to="/locations" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={closeSidebar}>
             <MapPin size={18} /> {t('nav_locations') || 'Ubicaciones'}
+          </NavLink>
+          <NavLink to="/bulk-operations" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={closeSidebar}>
+            <Layers size={18} /> {t('nav_bulk_operations')}
           </NavLink>
           <NavLink to="/linked-profiles" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={closeSidebar}>
             <LinkIcon size={18} /> {t('nav_linked')}

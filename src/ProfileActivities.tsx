@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from './api';
-import { ArrowLeft, Download, Plus, Save, Trash2, Edit2, ListChecks, Search, Eye, ThumbsUp, MessageSquare, Globe, MapPin, Star, Navigation } from 'lucide-react';
+import { ArrowLeft, Download, Plus, Save, Trash2, Edit2, ListChecks, Search, Eye, ThumbsUp, MessageSquare, Globe, MapPin, Star, Navigation, RefreshCw } from 'lucide-react';
 
 interface ProfileItem {
   id: number;
@@ -11,7 +11,17 @@ interface ProfileItem {
   profile_email?: string;
 }
 
-type PlatformType = 'youtube' | 'quora' | 'medium' | 'browser' | 'google' | 'gmaps';
+export interface ActivityLogItem {
+  id: number;
+  profile_id: number;
+  activity_name: string;
+  platform?: string;
+  status: string;
+  message?: string;
+  created_at: string;
+}
+
+type PlatformType = 'youtube' | 'quora' | 'medium' | 'browser' | 'google' | 'gmaps' | 'logs';
 
 const ProfileActivities: React.FC = () => {
   const { profileId } = useParams<{ profileId: string }>();
@@ -34,11 +44,28 @@ const ProfileActivities: React.FC = () => {
     google: [],
     gmaps: [],
   });
+  const [activityLogs, setActivityLogs] = useState<ActivityLogItem[]>([]);
+  const [logsLoading, setLogsLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<number | null>(null);
 
   // Form State
   const [formValues, setFormValues] = useState<any>({});
+  const [isBulkMode, setIsBulkMode] = useState(false);
+  const [bulkText, setBulkText] = useState('');
+
+  const fetchActivityLogs = async () => {
+    if (!profileId) return;
+    setLogsLoading(true);
+    try {
+      const res = await api.get(`/activities/log/profile/${profileId}`);
+      setActivityLogs(res.data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLogsLoading(false);
+    }
+  };
 
   const fetchProfileAndActivities = async () => {
     if (!profileId) return;
@@ -57,6 +84,7 @@ const ProfileActivities: React.FC = () => {
         google: actRes.data.google || [],
         gmaps: actRes.data.gmaps || [],
       });
+      fetchActivityLogs();
     } catch (err) {
       console.error(err);
     } finally {
@@ -71,7 +99,11 @@ const ProfileActivities: React.FC = () => {
   // Adjust default action type when platform changes
   const handlePlatformChange = (p: PlatformType) => {
     setPlatform(p);
-    if (p === 'browser') {
+    setIsBulkMode(false);
+    setBulkText('');
+    if (p === 'logs') {
+      fetchActivityLogs();
+    } else if (p === 'browser') {
       setActionType('visit_link');
     } else if (p === 'gmaps') {
       setActionType('gmaps_all');
@@ -84,6 +116,8 @@ const ProfileActivities: React.FC = () => {
 
   const handleActionTypeChange = (act: string) => {
     setActionType(act);
+    setIsBulkMode(false);
+    setBulkText('');
     setFormValues({});
     setEditingId(null);
   };
@@ -95,6 +129,18 @@ const ProfileActivities: React.FC = () => {
     try {
       if (editingId) {
         await api.patch(`/activities/${platform}/${editingId}`, formValues);
+      } else if (isBulkMode) {
+        const queries = bulkText.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
+        if (queries.length === 0) {
+          alert('Por favor ingresa al menos una búsqueda en el cuadro de texto.');
+          return;
+        }
+        await api.post(`/activities/${platform}/bulk`, {
+          profile_id: Number(profileId),
+          queries,
+        });
+        setBulkText('');
+        setIsBulkMode(false);
       } else {
         await api.post(`/activities/${platform}`, {
           profile_id: Number(profileId),
@@ -139,7 +185,7 @@ const ProfileActivities: React.FC = () => {
   };
 
   // Filter activities for current platform and action type
-  const currentList = (activities[platform] || []).filter((act: any) => {
+  const currentList = platform === 'logs' ? [] : ((activities as any)[platform] || []).filter((act: any) => {
     if (platform === 'browser') {
       return true; // visit_link
     }
@@ -250,9 +296,105 @@ const ProfileActivities: React.FC = () => {
           >
             ✍️ Medium ({activities.medium?.length || 0})
           </button>
+          <button
+            type="button"
+            className={`btn ${platform === 'logs' ? 'btn-primary' : 'btn-secondary'}`}
+            style={{
+              borderRadius: '0.5rem 0.5rem 0 0',
+              padding: '0.65rem 1.25rem',
+              background: platform === 'logs' ? '#059669' : undefined,
+              borderColor: platform === 'logs' ? '#059669' : undefined,
+              color: platform === 'logs' ? '#fff' : undefined,
+            }}
+            onClick={() => handlePlatformChange('logs')}
+          >
+            📜 Activity Log ({activityLogs.length})
+          </button>
         </div>
 
-        {/* SUB-TABS POR TIPO DE ACCIÓN ESPECÍFICA */}
+        {platform === 'logs' ? (
+          <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
+            <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  📜 Registro de Actividades Ejecutadas (Activity Log)
+                </h3>
+                <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                  Historial de ejecuciones reportadas por el cliente Moshi con status Correcto o Error.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+                onClick={fetchActivityLogs}
+                disabled={logsLoading}
+              >
+                <RefreshCw size={14} className={logsLoading ? 'animate-spin' : ''} />
+                {logsLoading ? 'Actualizando...' : 'Recargar Logs'}
+              </button>
+            </div>
+
+            {logsLoading ? (
+              <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>Cargando registros...</div>
+            ) : activityLogs.length === 0 ? (
+              <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                No hay actividades registradas en el log para este perfil aún.
+              </div>
+            ) : (
+              <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                <thead>
+                  <tr style={{ background: 'var(--surface-hover)', borderBottom: '1px solid var(--border)' }}>
+                    <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>ID</th>
+                    <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Fecha / Hora</th>
+                    <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Actividad</th>
+                    <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Plataforma</th>
+                    <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Estado</th>
+                    <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Mensaje / Detalle</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {activityLogs.map((log) => (
+                    <tr key={log.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                      <td style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', fontWeight: 600 }}>#{log.id}</td>
+                      <td style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                        {new Date(log.created_at).toLocaleString()}
+                      </td>
+                      <td style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', fontWeight: 600 }}>
+                        {log.activity_name}
+                      </td>
+                      <td style={{ padding: '0.85rem 1rem', fontSize: '0.85rem' }}>
+                        <span className="badge" style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#2563eb' }}>
+                          {log.platform || 'General'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '0.85rem 1rem', fontSize: '0.85rem' }}>
+                        {log.status === 'Correcto' ? (
+                          <span className="badge" style={{ background: 'rgba(34, 197, 94, 0.15)', color: '#16a34a', fontWeight: 'bold' }}>
+                            ✅ Correcto
+                          </span>
+                        ) : log.status === 'Error' ? (
+                          <span className="badge" style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#dc2626', fontWeight: 'bold' }}>
+                            ❌ Error
+                          </span>
+                        ) : (
+                          <span className="badge" style={{ background: 'rgba(156, 163, 175, 0.2)', color: '#4b5563' }}>
+                            {log.status}
+                          </span>
+                        )}
+                      </td>
+                      <td style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text)' }}>
+                        {log.message || '-'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        ) : (
+          <>
+            {/* SUB-TABS POR TIPO DE ACCIÓN ESPECÍFICA */}
         <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '1.5rem', background: 'var(--bg-card)', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border)' }}>
           {platform === 'browser' && (
             <button
@@ -459,10 +601,48 @@ const ProfileActivities: React.FC = () => {
 
         {/* FORMULARIO AGREGAR / EDITAR EN ESTE TAB ESPECÍFICO */}
         <form onSubmit={handleSave} className="card" style={{ marginBottom: '1.5rem' }}>
-          <h3 style={{ marginTop: 0, marginBottom: '1rem', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Plus size={18} color="var(--primary)" />
-            {editingId ? 'Editar Actividad' : 'Agregar Nueva Actividad'}
-          </h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <h3 style={{ margin: 0, fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Plus size={18} color="var(--primary)" />
+              {editingId ? 'Editar Actividad' : isBulkMode ? 'Agregar Búsquedas en Bulk' : 'Agregar Nueva Actividad'}
+            </h3>
+            {!editingId && (platform === 'google' || (platform === 'youtube' && actionType === 'search')) && (
+              <div style={{ display: 'inline-flex', background: 'var(--surface-hover)', padding: '2px', borderRadius: '0.375rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsBulkMode(false)}
+                  style={{
+                    padding: '0.3rem 0.65rem',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    borderRadius: '0.25rem',
+                    border: 'none',
+                    cursor: 'pointer',
+                    background: !isBulkMode ? 'var(--primary)' : 'transparent',
+                    color: !isBulkMode ? 'white' : 'var(--text-muted)',
+                  }}
+                >
+                  Individual
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsBulkMode(true)}
+                  style={{
+                    padding: '0.3rem 0.65rem',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    borderRadius: '0.25rem',
+                    border: 'none',
+                    cursor: 'pointer',
+                    background: isBulkMode ? 'var(--primary)' : 'transparent',
+                    color: isBulkMode ? 'white' : 'var(--text-muted)',
+                  }}
+                >
+                  Masivo (Bulk Textarea)
+                </button>
+              </div>
+            )}
+          </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             {/* BROWSER INPUTS */}
@@ -483,15 +663,36 @@ const ProfileActivities: React.FC = () => {
             {/* GOOGLE INPUTS */}
             {platform === 'google' && (
               <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                <label>Search Query (Búsqueda en Google)</label>
-                <input
-                  type="text"
-                  className="input-field"
-                  placeholder="Ej. mejores servicios de mudanza en Miami"
-                  value={formValues.search_query || ''}
-                  onChange={(e) => setFormValues({ ...formValues, search_query: e.target.value })}
-                  required
-                />
+                {isBulkMode ? (
+                  <>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                      <label style={{ fontWeight: 600 }}>Búsquedas Masivas en Google (una por línea)</label>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--primary)', fontWeight: 'bold' }}>
+                        {bulkText.split('\n').filter((l) => l.trim()).length} búsquedas
+                      </span>
+                    </div>
+                    <textarea
+                      className="input-field"
+                      rows={6}
+                      placeholder={`Pega aquí tus búsquedas separadas por Enter:\nmejores servicios de mudanza en Miami\nmudanzas economicas en Austin\nempresas de fletes y transporte`}
+                      value={bulkText}
+                      onChange={(e) => setBulkText(e.target.value)}
+                      required
+                    />
+                  </>
+                ) : (
+                  <>
+                    <label>Search Query (Búsqueda en Google)</label>
+                    <input
+                      type="text"
+                      className="input-field"
+                      placeholder="Ej. mejores servicios de mudanza en Miami"
+                      value={formValues.search_query || ''}
+                      onChange={(e) => setFormValues({ ...formValues, search_query: e.target.value })}
+                      required
+                    />
+                  </>
+                )}
               </div>
             )}
 
@@ -558,15 +759,36 @@ const ProfileActivities: React.FC = () => {
             {/* YOUTUBE / QUORA / MEDIUM COMMON SEARCH */}
             {(platform === 'youtube' || platform === 'quora' || platform === 'medium') && actionType === 'search' && (
               <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                <label>Search Query (Término de búsqueda)</label>
-                <input
-                  type="text"
-                  className="input-field"
-                  placeholder="Ej. tutorial python nestjs"
-                  value={formValues.search_query || ''}
-                  onChange={(e) => setFormValues({ ...formValues, search_query: e.target.value })}
-                  required
-                />
+                {platform === 'youtube' && isBulkMode ? (
+                  <>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                      <label style={{ fontWeight: 600 }}>Búsquedas Masivas en YouTube (una por línea)</label>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--primary)', fontWeight: 'bold' }}>
+                        {bulkText.split('\n').filter((l) => l.trim()).length} búsquedas
+                      </span>
+                    </div>
+                    <textarea
+                      className="input-field"
+                      rows={6}
+                      placeholder={`Pega aquí tus búsquedas de YouTube separadas por Enter:\ntutorial react vite\ncomo crear un bot en python\nmusica relajante para trabajar`}
+                      value={bulkText}
+                      onChange={(e) => setBulkText(e.target.value)}
+                      required
+                    />
+                  </>
+                ) : (
+                  <>
+                    <label>Search Query (Término de búsqueda)</label>
+                    <input
+                      type="text"
+                      className="input-field"
+                      placeholder="Ej. tutorial python nestjs"
+                      value={formValues.search_query || ''}
+                      onChange={(e) => setFormValues({ ...formValues, search_query: e.target.value })}
+                      required
+                    />
+                  </>
+                )}
               </div>
             )}
 
@@ -950,6 +1172,8 @@ const ProfileActivities: React.FC = () => {
             </div>
           )}
         </div>
+        </>
+      )}
       </div>
     </div>
   );

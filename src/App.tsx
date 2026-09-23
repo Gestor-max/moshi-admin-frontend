@@ -7,6 +7,9 @@ import Login from './Login';
 import Register from './Register';
 import Dashboard from './Dashboard';
 import Profiles from './Profiles';
+import ArchivedProfiles from './ArchivedProfiles';
+import Tags from './Tags';
+import BulkOperations from './BulkOperations';
 import NewProfile from './NewProfile';
 import EditProfile from './EditProfile';
 import ProfileActivities from './ProfileActivities';
@@ -54,6 +57,9 @@ function App() {
             {/* Rutas Privadas del Panel */}
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/profiles" element={<ProtectedRoute><Profiles /></ProtectedRoute>} />
+            <Route path="/profiles/archived" element={<ProtectedRoute><ArchivedProfiles /></ProtectedRoute>} />
+            <Route path="/tags" element={<ProtectedRoute><Tags /></ProtectedRoute>} />
+            <Route path="/bulk-operations" element={<ProtectedRoute><BulkOperations /></ProtectedRoute>} />
             <Route path="/profiles/new" element={<ProtectedRoute><NewProfile /></ProtectedRoute>} />
             <Route path="/profiles/:profileId/edit" element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />
             <Route path="/profiles/:profileId/activities" element={<ProtectedRoute><ProfileActivities /></ProtectedRoute>} />

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from './api';
 import { useLanguage } from './LanguageContext';
-import { UserCheck, Plus, Search, Trash2, Edit2, X, Save, Link as LinkIcon, ListChecks, AlertCircle } from 'lucide-react';
+import { UserCheck, Plus, Search, Trash2, Edit2, X, Save, Link as LinkIcon, ListChecks, AlertCircle, Archive } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 interface ProxyItem {
@@ -21,6 +21,12 @@ interface LocationItem {
   id: number;
   state: string;
   location: string;
+}
+
+interface TagItem {
+  id: number;
+  name: string;
+  color?: string;
 }
 
 interface ProfileWebsiteAccount {
@@ -60,6 +66,9 @@ interface ProfileItem {
   time_zone?: string;
   proxy_id?: number | null;
   location_id?: number | null;
+  location_proxy_id?: number | null;
+  location_proxy_alt_id?: number | null;
+  tag_id?: number | null;
   empleo?: string;
   educacion?: string;
   ubicacion?: string;
@@ -67,6 +76,9 @@ interface ProfileItem {
   telefono?: string;
   proxy?: ProxyItem;
   location?: LocationItem;
+  location_proxy?: LocationItem;
+  location_proxy_alt?: LocationItem;
+  tag?: TagItem;
   profile_websites?: ProfileWebsiteAccount[];
 }
 
@@ -157,10 +169,21 @@ const Profiles: React.FC = () => {
     }
   };
 
+  const handleArchive = async (id: number) => {
+    if (!window.confirm('¿Deseas archivar este perfil? Se moverá a la sección de "Perfiles Archivados".')) {
+      return;
+    }
 
+    try {
+      await api.patch(`/profiles/${id}/archive`, { is_archived: true });
+      fetchProfiles(search);
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Error al archivar el perfil.');
+    }
+  };
 
   return (
-    <div className="dashboard">
+    <div className="dashboard" style={{ width: '100%', maxWidth: '100%' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
         <div>
           <h1>{t('profiles_title')}</h1>
@@ -206,90 +229,146 @@ const Profiles: React.FC = () => {
           </Link>
         </div>
       ) : (
-        <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
+        <div className="card" style={{ padding: 0, overflowX: 'auto', width: '100%' }}>
           <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
             <thead>
               <tr style={{ background: 'var(--surface-hover)', borderBottom: '1px solid var(--border)' }}>
                 <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>ID</th>
                 <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Nombre Completo</th>
+                <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Etiqueta</th>
                 <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Gmail</th>
-                <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Proxy Asignado</th>
+                <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Proxy</th>
                 <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Ubicación</th>
+                <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>🛰️ Location Proxy</th>
+                <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>🔄 Location Proxy Alt</th>
                 <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>País</th>
                 <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'right' }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {profiles.map((p) => (
-                <tr key={p.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                  <td style={{ padding: '1rem', fontSize: '0.875rem', fontWeight: 600 }}>#{p.id}</td>
-                  <td style={{ padding: '1rem' }}>
-                    <div style={{ fontWeight: 600, color: 'var(--text)' }}>
-                      {p.name} {p.lastname}
-                    </div>
-                  </td>
-                  <td style={{ padding: '1rem', fontSize: '0.875rem', color: 'var(--text-muted)' }}>
-                    {p.gmail || '-'}
-                  </td>
-                  <td style={{ padding: '1rem', fontSize: '0.85rem' }}>
-                    {p.proxy ? (
-                      <span className="badge" style={{ background: 'rgba(168, 85, 247, 0.15)', color: '#a855f7' }}>
-                        {p.proxy.ip}:{p.proxy.port}
-                      </span>
-                    ) : (
-                      <span style={{ color: 'var(--text-muted)' }}>Sin Proxy</span>
-                    )}
-                  </td>
-                  <td style={{ padding: '1rem', fontSize: '0.85rem' }}>
-                    {p.location ? (
-                      <span className="badge" style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6' }}>
-                        {p.location.location} ({p.location.state})
-                      </span>
-                    ) : (
-                      <span style={{ color: 'var(--text-muted)' }}>Sin Ubicación</span>
-                    )}
-                  </td>
-                  <td style={{ padding: '1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                    {p.pais_iso || '-'}
-                  </td>
-                  <td style={{ padding: '1rem', textAlign: 'right' }}>
-                    <div style={{ display: 'inline-flex', gap: '0.4rem', justifyContent: 'flex-end' }}>
-                      <Link
-                        to={`/profiles/${p.id}/activities`}
-                        className="btn btn-secondary"
-                        style={{ padding: '0.35rem 0.6rem', fontSize: '0.8rem', background: '#2563eb', color: 'white', borderColor: '#2563eb', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
-                        title="Ver y Gestionar Actividades"
-                      >
-                        <ListChecks size={14} /> Actividades
-                      </Link>
-                      <button
-                        className="btn btn-secondary"
-                        style={{ padding: '0.35rem 0.6rem', fontSize: '0.8rem' }}
-                        title="Vincular Sitio Web"
-                        onClick={() => openAddSiteModal(p)}
-                      >
-                        <LinkIcon size={14} /> Vincular
-                      </button>
-                      <Link
-                        to={`/profiles/${p.id}/edit`}
-                        className="btn btn-secondary"
-                        style={{ padding: '0.35rem 0.6rem', fontSize: '0.8rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
-                        title="Editar Perfil"
-                      >
-                        <Edit2 size={14} /> Editar
-                      </Link>
-                      <button
-                        className="btn btn-danger"
-                        style={{ padding: '0.35rem 0.6rem', fontSize: '0.8rem' }}
-                        title="Eliminar Perfil"
-                        onClick={() => handleDelete(p.id)}
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {profiles.map((p) => {
+                const tagColor = p.tag?.color || '#3b82f6';
+                return (
+                  <tr key={p.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                    <td style={{ padding: '1rem', fontSize: '0.875rem', fontWeight: 600 }}>#{p.id}</td>
+                    <td style={{ padding: '1rem' }}>
+                      <div style={{ fontWeight: 600, color: 'var(--text)' }}>
+                        {p.name} {p.lastname}
+                      </div>
+                    </td>
+                    <td style={{ padding: '1rem' }}>
+                      {p.tag ? (
+                        <span
+                          className="badge"
+                          style={{
+                            background: `${tagColor}22`,
+                            color: tagColor,
+                            border: `1px solid ${tagColor}66`,
+                            fontWeight: 'bold',
+                            fontSize: '0.8rem',
+                            padding: '0.25rem 0.55rem',
+                            borderRadius: '9999px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.35rem',
+                          }}
+                        >
+                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: tagColor }} />
+                          {p.tag.name}
+                        </span>
+                      ) : (
+                        <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>-</span>
+                      )}
+                    </td>
+                    <td style={{ padding: '1rem', fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+                      {p.gmail || '-'}
+                    </td>
+                    <td style={{ padding: '1rem', fontSize: '0.85rem' }}>
+                      {p.proxy ? (
+                        <span className="badge" style={{ background: 'rgba(168, 85, 247, 0.15)', color: '#a855f7' }}>
+                          {p.proxy.ip}:{p.proxy.port}
+                        </span>
+                      ) : (
+                        <span style={{ color: 'var(--text-muted)' }}>Sin Proxy</span>
+                      )}
+                    </td>
+                    <td style={{ padding: '1rem', fontSize: '0.85rem' }}>
+                      {p.location ? (
+                        <span className="badge" style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6' }}>
+                          {p.location.location} ({p.location.state})
+                        </span>
+                      ) : (
+                        <span style={{ color: 'var(--text-muted)' }}>Sin Ubicación</span>
+                      )}
+                    </td>
+                    <td style={{ padding: '1rem', fontSize: '0.85rem' }}>
+                      {p.location_proxy ? (
+                        <span className="badge" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981' }}>
+                          {p.location_proxy.location} ({p.location_proxy.state})
+                        </span>
+                      ) : (
+                        <span style={{ color: 'var(--text-muted)' }}>-</span>
+                      )}
+                    </td>
+                    <td style={{ padding: '1rem', fontSize: '0.85rem' }}>
+                      {p.location_proxy_alt ? (
+                        <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b' }}>
+                          {p.location_proxy_alt.location} ({p.location_proxy_alt.state})
+                        </span>
+                      ) : (
+                        <span style={{ color: 'var(--text-muted)' }}>-</span>
+                      )}
+                    </td>
+                    <td style={{ padding: '1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                      {p.pais_iso || '-'}
+                    </td>
+                    <td style={{ padding: '1rem', textAlign: 'right' }}>
+                      <div style={{ display: 'inline-flex', gap: '0.4rem', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                        <Link
+                          to={`/profiles/${p.id}/activities`}
+                          className="btn btn-secondary"
+                          style={{ padding: '0.35rem 0.6rem', fontSize: '0.8rem', background: '#2563eb', color: 'white', borderColor: '#2563eb', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+                          title="Ver y Gestionar Actividades"
+                        >
+                          <ListChecks size={14} /> Actividades
+                        </Link>
+                        <button
+                          className="btn btn-secondary"
+                          style={{ padding: '0.35rem 0.6rem', fontSize: '0.8rem' }}
+                          title="Vincular Sitio Web"
+                          onClick={() => openAddSiteModal(p)}
+                        >
+                          <LinkIcon size={14} /> Vincular
+                        </button>
+                        <Link
+                          to={`/profiles/${p.id}/edit`}
+                          className="btn btn-secondary"
+                          style={{ padding: '0.35rem 0.6rem', fontSize: '0.8rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+                          title="Editar Perfil"
+                        >
+                          <Edit2 size={14} /> Editar
+                        </Link>
+                        <button
+                          className="btn btn-secondary"
+                          style={{ padding: '0.35rem 0.6rem', fontSize: '0.8rem', color: '#f59e0b', borderColor: 'rgba(245, 158, 11, 0.4)', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+                          title="Archivar Perfil"
+                          onClick={() => handleArchive(p.id)}
+                        >
+                          <Archive size={14} /> Archivar
+                        </button>
+                        <button
+                          className="btn btn-danger"
+                          style={{ padding: '0.35rem 0.6rem', fontSize: '0.8rem' }}
+                          title="Eliminar Perfil"
+                          onClick={() => handleDelete(p.id)}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

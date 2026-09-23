@@ -17,6 +17,12 @@ interface LocationItem {
   location: string;
 }
 
+interface TagItem {
+  id: number;
+  name: string;
+  color?: string;
+}
+
 type TabType = 'basica' | 'credenciales' | 'empleo' | 'educacion' | 'ubicacion';
 
 const EditProfile: React.FC = () => {
@@ -26,6 +32,7 @@ const EditProfile: React.FC = () => {
 
   const [proxies, setProxies] = useState<ProxyItem[]>([]);
   const [locations, setLocations] = useState<LocationItem[]>([]);
+  const [tags, setTags] = useState<TagItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -59,6 +66,9 @@ const EditProfile: React.FC = () => {
     time_zone: 'America/Mexico_City',
     proxy_id: '',
     location_id: '',
+    location_proxy_id: '',
+    location_proxy_alt_id: '',
+    tag_id: '',
     two_fa: '',
     telefono: '',
   });
@@ -92,10 +102,11 @@ const EditProfile: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [resProfile, resProxies, resLocs] = await Promise.all([
+        const [resProfile, resProxies, resLocs, resTags] = await Promise.all([
           api.get(`/profiles/${profileId}`),
           api.get('/proxies'),
           api.get('/locations'),
+          api.get('/tags'),
         ]);
 
         const prof = resProfile.data;
@@ -127,6 +138,9 @@ const EditProfile: React.FC = () => {
             time_zone: prof.time_zone || 'America/Mexico_City',
             proxy_id: prof.proxy_id ? String(prof.proxy_id) : '',
             location_id: prof.location_id ? String(prof.location_id) : '',
+            location_proxy_id: prof.location_proxy_id ? String(prof.location_proxy_id) : '',
+            location_proxy_alt_id: prof.location_proxy_alt_id ? String(prof.location_proxy_alt_id) : '',
+            tag_id: prof.tag_id ? String(prof.tag_id) : '',
             two_fa: prof.two_fa || '',
             telefono: prof.telefono || '',
           });
@@ -145,6 +159,7 @@ const EditProfile: React.FC = () => {
         }
         setProxies(resProxies.data);
         setLocations(resLocs.data);
+        setTags(resTags.data);
       } catch (err) {
         console.error(err);
         setError('Error al cargar la información del perfil.');
@@ -181,6 +196,9 @@ const EditProfile: React.FC = () => {
           day_nac: Number(formData.day_nac) || 1,
           proxy_id: formData.proxy_id ? Number(formData.proxy_id) : null,
           location_id: formData.location_id ? Number(formData.location_id) : null,
+          location_proxy_id: formData.location_proxy_id ? Number(formData.location_proxy_id) : null,
+          location_proxy_alt_id: formData.location_proxy_alt_id ? Number(formData.location_proxy_alt_id) : null,
+          tag_id: formData.tag_id ? Number(formData.tag_id) : null,
           empleo: JSON.stringify(empleo),
           educacion: JSON.stringify(educacion),
           ubicacion: JSON.stringify(ubicacion),
@@ -385,6 +403,42 @@ const EditProfile: React.FC = () => {
                   {locations.map((loc) => (
                     <option key={loc.id} value={loc.id}>
                       {loc.location} ({loc.state})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>🛰️ Location Proxy (Opcional)</label>
+                <select name="location_proxy_id" className="input-field" value={formData.location_proxy_id} onChange={handleChange}>
+                  <option value="">-- Sin Location Proxy --</option>
+                  {locations.map((loc) => (
+                    <option key={loc.id} value={loc.id}>
+                      {loc.location} ({loc.state})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>🔄 Location Proxy Alternativa (Opcional)</label>
+                <select name="location_proxy_alt_id" className="input-field" value={formData.location_proxy_alt_id} onChange={handleChange}>
+                  <option value="">-- Sin Location Proxy Alternativa --</option>
+                  {locations.map((loc) => (
+                    <option key={loc.id} value={loc.id}>
+                      {loc.location} ({loc.state})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>🏷️ Etiqueta / Tag (Opcional)</label>
+                <select name="tag_id" className="input-field" value={formData.tag_id} onChange={handleChange}>
+                  <option value="">-- Sin Etiqueta --</option>
+                  {tags.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
                     </option>
                   ))}
                 </select>

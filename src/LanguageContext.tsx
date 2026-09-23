@@ -7,8 +7,11 @@ export const translations = {
     // Navigation / Header
     nav_dashboard: "Panel Principal",
     nav_profiles: "Perfiles",
+    nav_archived_profiles: "Perfiles Archivados",
+    nav_tags: "Etiquetas / Tags",
     nav_proxies: "Proxies",
     nav_locations: "Ubicaciones",
+    nav_bulk_operations: "Bulk Operations",
     nav_websites: "Sitios Web",
     nav_linked: "Vínculos",
     nav_automations: "Automatizaciones",
@@ -149,8 +152,11 @@ export const translations = {
     // Navigation / Header
     nav_dashboard: "Dashboard",
     nav_profiles: "Profiles",
+    nav_archived_profiles: "Archived Profiles",
+    nav_tags: "Tags",
     nav_proxies: "Proxies",
     nav_locations: "Locations",
+    nav_bulk_operations: "Bulk Operations",
     nav_websites: "Websites",
     nav_linked: "Linked Profiles",
     nav_automations: "Automations",

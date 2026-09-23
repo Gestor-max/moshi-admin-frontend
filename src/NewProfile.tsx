@@ -17,6 +17,12 @@ interface LocationItem {
   location: string;
 }
 
+interface TagItem {
+  id: number;
+  name: string;
+  color?: string;
+}
+
 type TabType = 'basica' | 'credenciales' | 'empleo' | 'educacion' | 'ubicacion';
 
 const NewProfile: React.FC = () => {
@@ -25,6 +31,7 @@ const NewProfile: React.FC = () => {
 
   const [proxies, setProxies] = useState<ProxyItem[]>([]);
   const [locations, setLocations] = useState<LocationItem[]>([]);
+  const [tags, setTags] = useState<TagItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<TabType>('basica');
@@ -57,6 +64,9 @@ const NewProfile: React.FC = () => {
     time_zone: 'America/Mexico_City',
     proxy_id: '',
     location_id: '',
+    location_proxy_id: '',
+    location_proxy_alt_id: '',
+    tag_id: '',
     two_fa: '',
     telefono: '',
   });
@@ -90,12 +100,14 @@ const NewProfile: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [resProxies, resLocs] = await Promise.all([
+        const [resProxies, resLocs, resTags] = await Promise.all([
           api.get('/proxies'),
           api.get('/locations'),
+          api.get('/tags'),
         ]);
         setProxies(resProxies.data);
         setLocations(resLocs.data);
+        setTags(resTags.data);
       } catch (err) {
         console.error(err);
       }
@@ -129,6 +141,9 @@ const NewProfile: React.FC = () => {
           day_nac: Number(formData.day_nac) || 1,
           proxy_id: formData.proxy_id ? Number(formData.proxy_id) : null,
           location_id: formData.location_id ? Number(formData.location_id) : null,
+          location_proxy_id: formData.location_proxy_id ? Number(formData.location_proxy_id) : null,
+          location_proxy_alt_id: formData.location_proxy_alt_id ? Number(formData.location_proxy_alt_id) : null,
+          tag_id: formData.tag_id ? Number(formData.tag_id) : null,
           empleo: JSON.stringify(empleo),
           educacion: JSON.stringify(educacion),
           ubicacion: JSON.stringify(ubicacion),
@@ -325,6 +340,42 @@ const NewProfile: React.FC = () => {
                   {locations.map((loc) => (
                     <option key={loc.id} value={loc.id}>
                       {loc.location} ({loc.state})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>🛰️ Location Proxy (Opcional)</label>
+                <select name="location_proxy_id" className="input-field" value={formData.location_proxy_id} onChange={handleChange}>
+                  <option value="">-- Sin Location Proxy --</option>
+                  {locations.map((loc) => (
+                    <option key={loc.id} value={loc.id}>
+                      {loc.location} ({loc.state})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>🔄 Location Proxy Alternativa (Opcional)</label>
+                <select name="location_proxy_alt_id" className="input-field" value={formData.location_proxy_alt_id} onChange={handleChange}>
+                  <option value="">-- Sin Location Proxy Alternativa --</option>
+                  {locations.map((loc) => (
+                    <option key={loc.id} value={loc.id}>
+                      {loc.location} ({loc.state})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>🏷️ Etiqueta / Tag (Opcional)</label>
+                <select name="tag_id" className="input-field" value={formData.tag_id} onChange={handleChange}>
+                  <option value="">-- Sin Etiqueta --</option>
+                  {tags.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
                     </option>
                   ))}
                 </select>
