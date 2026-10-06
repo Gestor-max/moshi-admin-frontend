@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from './api';
 import { useLanguage } from './LanguageContext';
-import { UserCheck, Plus, Search, Trash2, Edit2, X, Save, Link as LinkIcon, ListChecks, AlertCircle, Archive } from 'lucide-react';
+import { UserCheck, Plus, Search, Trash2, Edit2, X, Save, Link as LinkIcon, ListChecks, AlertCircle, Archive, Skull } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 interface ProxyItem {
@@ -38,6 +38,15 @@ interface ProfileWebsiteAccount {
   website?: WebsiteItem;
 }
 
+interface ActivityCount {
+  google_activities?: number;
+  youtube_activities?: number;
+  gmaps_activities?: number;
+  browser_activities?: number;
+  quora_activities?: number;
+  medium_activities?: number;
+}
+
 interface ProfileItem {
   id: number;
   name: string;
@@ -69,6 +78,7 @@ interface ProfileItem {
   location_proxy_id?: number | null;
   location_proxy_alt_id?: number | null;
   tag_id?: number | null;
+  is_zombie?: number;
   empleo?: string;
   educacion?: string;
   ubicacion?: string;
@@ -80,6 +90,7 @@ interface ProfileItem {
   location_proxy_alt?: LocationItem;
   tag?: TagItem;
   profile_websites?: ProfileWebsiteAccount[];
+  _count?: ActivityCount;
 }
 
 const Profiles: React.FC = () => {
@@ -182,6 +193,19 @@ const Profiles: React.FC = () => {
     }
   };
 
+  const handleZombie = async (id: number) => {
+    if (!window.confirm('¿Deseas marcar este perfil como ZOMBIE? Se moverá a la sección de "Cuentas Zombie".')) {
+      return;
+    }
+
+    try {
+      await api.patch(`/profiles/${id}/zombie`, { is_zombie: 1 });
+      fetchProfiles(search);
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Error al marcar perfil como zombie.');
+    }
+  };
+
   return (
     <div className="dashboard" style={{ width: '100%', maxWidth: '100%' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
@@ -242,6 +266,7 @@ const Profiles: React.FC = () => {
                 <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>🛰️ Location Proxy</th>
                 <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>🔄 Location Proxy Alt</th>
                 <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>País</th>
+                <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>⚡ Actividades</th>
                 <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'right' }}>Acciones</th>
               </tr>
             </thead>
@@ -322,6 +347,22 @@ const Profiles: React.FC = () => {
                     <td style={{ padding: '1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                       {p.pais_iso || '-'}
                     </td>
+                    <td style={{ padding: '1rem', fontSize: '0.82rem' }}>
+                      <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                        <span className="badge" style={{ background: '#3b82f615', color: '#3b82f6', border: '1px solid #3b82f630', fontSize: '0.75rem' }} title="Búsquedas Google">
+                          🔍 {p._count?.google_activities || 0}
+                        </span>
+                        <span className="badge" style={{ background: '#ef444415', color: '#ef4444', border: '1px solid #ef444430', fontSize: '0.75rem' }} title="YouTube">
+                          🔴 {p._count?.youtube_activities || 0}
+                        </span>
+                        <span className="badge" style={{ background: '#10b98115', color: '#10b981', border: '1px solid #10b98130', fontSize: '0.75rem' }} title="Google Maps">
+                          🗺️ {p._count?.gmaps_activities || 0}
+                        </span>
+                        <span className="badge" style={{ background: '#6366f115', color: '#6366f1', border: '1px solid #6366f130', fontSize: '0.75rem' }} title="Sitios Web (Browser)">
+                          🌐 {p._count?.browser_activities || 0}
+                        </span>
+                      </div>
+                    </td>
                     <td style={{ padding: '1rem', textAlign: 'right' }}>
                       <div style={{ display: 'inline-flex', gap: '0.4rem', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
                         <Link
@@ -355,6 +396,14 @@ const Profiles: React.FC = () => {
                           onClick={() => handleArchive(p.id)}
                         >
                           <Archive size={14} /> Archivar
+                        </button>
+                        <button
+                          className="btn btn-secondary"
+                          style={{ padding: '0.35rem 0.6rem', fontSize: '0.8rem', color: '#ec4899', borderColor: 'rgba(236, 72, 153, 0.4)', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+                          title="Marcar como Zombie"
+                          onClick={() => handleZombie(p.id)}
+                        >
+                          <Skull size={14} /> Zombie
                         </button>
                         <button
                           className="btn btn-danger"
