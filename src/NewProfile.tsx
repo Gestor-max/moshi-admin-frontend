@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from './api';
 import { useLanguage } from './LanguageContext';
 import { useNavigate, Link } from 'react-router-dom';
-import { UserCheck, Save, ArrowLeft, Briefcase, GraduationCap, MapPin, Key, User } from 'lucide-react';
+import { UserCheck, Save, ArrowLeft, Briefcase, GraduationCap, MapPin, Key, User, Eye, EyeOff } from 'lucide-react';
 
 interface ProxyItem {
   id: number;
@@ -35,6 +35,11 @@ const NewProfile: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<TabType>('basica');
+  const [showPasswords, setShowPasswords] = useState<{ [key: string]: boolean }>({});
+
+  const togglePasswordVisibility = (field: string) => {
+    setShowPasswords((prev) => ({ ...prev, [field]: !prev[field] }));
+  };
 
   // Basic Profile fields
   const [formData, setFormData] = useState({
@@ -51,7 +56,9 @@ const NewProfile: React.FC = () => {
     description_html: '',
     gmail: '',
     gmail_password: '',
+    gmail_password_prev: '',
     email_recovery: '',
+    email_recovery_prev: '',
     profile_email: '',
     profile_email_password: '',
     bio: '',
@@ -68,6 +75,7 @@ const NewProfile: React.FC = () => {
     location_proxy_alt_id: '',
     tag_id: '',
     two_fa: '',
+    two_fa_prev: '',
     telefono: '',
   });
 
@@ -397,13 +405,94 @@ const NewProfile: React.FC = () => {
               </div>
 
               <div className="form-group">
-                <label>Contraseña Gmail</label>
-                <input type="password" className="input-field" name="gmail_password" value={formData.gmail_password} onChange={handleChange} placeholder="••••••••" />
+                <label>Teléfono (Opcional)</label>
+                <input type="text" className="input-field" name="telefono" value={formData.telefono} onChange={handleChange} placeholder="Ej: +52 55 1234 5678" />
+              </div>
+
+              <div className="form-group">
+                <label>Contraseña Gmail Actual</label>
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <input
+                    type={showPasswords.gmail_password ? 'text' : 'password'}
+                    className="input-field"
+                    name="gmail_password"
+                    value={formData.gmail_password}
+                    onChange={handleChange}
+                    placeholder="••••••••"
+                    style={{ paddingRight: '2.5rem' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => togglePasswordVisibility('gmail_password')}
+                    style={{
+                      position: 'absolute',
+                      right: '0.75rem',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: 'var(--text-muted)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      padding: 0
+                    }}
+                    title={showPasswords.gmail_password ? 'Ocultar contraseña' : 'Ver contraseña'}
+                  >
+                    {showPasswords.gmail_password ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label>Contraseña Google Anterior</label>
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <input
+                    type={showPasswords.gmail_password_prev ? 'text' : 'password'}
+                    className="input-field"
+                    name="gmail_password_prev"
+                    value={formData.gmail_password_prev}
+                    onChange={handleChange}
+                    placeholder="Contraseña anterior..."
+                    style={{ paddingRight: '2.5rem' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => togglePasswordVisibility('gmail_password_prev')}
+                    style={{
+                      position: 'absolute',
+                      right: '0.75rem',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: 'var(--text-muted)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      padding: 0
+                    }}
+                    title={showPasswords.gmail_password_prev ? 'Ocultar contraseña' : 'Ver contraseña'}
+                  >
+                    {showPasswords.gmail_password_prev ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
               </div>
 
               <div className="form-group">
                 <label>Correo de Recuperación (Gmail)</label>
                 <input type="email" className="input-field" name="email_recovery" value={formData.email_recovery} onChange={handleChange} placeholder="recuperacion@gmail.com" />
+              </div>
+
+              <div className="form-group">
+                <label>Correo de Recuperación Anterior</label>
+                <input type="email" className="input-field" name="email_recovery_prev" value={formData.email_recovery_prev} onChange={handleChange} placeholder="recuperacion_anterior@gmail.com" />
+              </div>
+
+              <div className="form-group">
+                <label>Código 2FA Actual (Opcional)</label>
+                <input type="text" className="input-field" name="two_fa" value={formData.two_fa} onChange={handleChange} placeholder="Ej: JBSWY3DPEHPK3PXP" />
+              </div>
+
+              <div className="form-group">
+                <label>Código 2FA Anterior (Opcional)</label>
+                <input type="text" className="input-field" name="two_fa_prev" value={formData.two_fa_prev} onChange={handleChange} placeholder="Secreto OTP anterior..." />
               </div>
 
               <div className="form-group">
@@ -413,17 +502,35 @@ const NewProfile: React.FC = () => {
 
               <div className="form-group">
                 <label>Contraseña Correo Perfil</label>
-                <input type="password" className="input-field" name="profile_email_password" value={formData.profile_email_password} onChange={handleChange} placeholder="••••••••" />
-              </div>
-
-              <div className="form-group">
-                <label>Código 2FA (Opcional)</label>
-                <input type="text" className="input-field" name="two_fa" value={formData.two_fa} onChange={handleChange} placeholder="Ej: JBSWY3DPEHPK3PXP" />
-              </div>
-
-              <div className="form-group">
-                <label>Teléfono (Opcional)</label>
-                <input type="text" className="input-field" name="telefono" value={formData.telefono} onChange={handleChange} placeholder="Ej: +52 55 1234 5678" />
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <input
+                    type={showPasswords.profile_email_password ? 'text' : 'password'}
+                    className="input-field"
+                    name="profile_email_password"
+                    value={formData.profile_email_password}
+                    onChange={handleChange}
+                    placeholder="••••••••"
+                    style={{ paddingRight: '2.5rem' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => togglePasswordVisibility('profile_email_password')}
+                    style={{
+                      position: 'absolute',
+                      right: '0.75rem',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: 'var(--text-muted)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      padding: 0
+                    }}
+                    title={showPasswords.profile_email_password ? 'Ocultar contraseña' : 'Ver contraseña'}
+                  >
+                    {showPasswords.profile_email_password ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
               </div>
             </div>
           )}

@@ -62,7 +62,9 @@ interface ProfileItem {
   description_html?: string;
   gmail?: string;
   gmail_password?: string;
+  gmail_password_prev?: string;
   email_recovery?: string;
+  email_recovery_prev?: string;
   profile_email?: string;
   profile_email_password?: string;
   bio?: string;
@@ -83,6 +85,7 @@ interface ProfileItem {
   educacion?: string;
   ubicacion?: string;
   two_fa?: string;
+  two_fa_prev?: string;
   telefono?: string;
   proxy?: ProxyItem;
   location?: LocationItem;

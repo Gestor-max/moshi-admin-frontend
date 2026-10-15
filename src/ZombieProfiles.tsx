@@ -39,6 +39,7 @@ interface ProfileItem {
   profile_email?: string;
   pais_iso?: string;
   is_zombie?: number;
+  zombie_at?: string;
   proxy?: ProxyItem;
   location?: LocationItem;
   location_proxy?: LocationItem;
@@ -156,6 +157,7 @@ const ZombieProfiles: React.FC = () => {
                 <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>ID</th>
                 <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Nombre Completo</th>
                 <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Estado</th>
+                <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Fecha Zombie</th>
                 <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Gmail / Correo</th>
                 <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Proxy</th>
                 <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Ubicación</th>
@@ -193,6 +195,16 @@ const ZombieProfiles: React.FC = () => {
                       <span className="badge" style={{ background: 'rgba(236, 72, 153, 0.15)', color: '#ec4899', border: '1px solid rgba(236, 72, 153, 0.3)', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
                         <AlertTriangle size={12} /> Zombie
                       </span>
+                    </td>
+                    <td style={{ padding: '1rem', fontSize: '0.85rem' }}>
+                      {p.zombie_at ? (
+                        <div>
+                          <div style={{ fontWeight: 600, color: '#ec4899' }}>💀 {new Date(p.zombie_at).toLocaleDateString()}</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{new Date(p.zombie_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                        </div>
+                      ) : (
+                        <span style={{ color: 'var(--text-muted)' }}>Sin fecha</span>
+                      )}
                     </td>
                     <td style={{ padding: '1rem', fontSize: '0.85rem' }}>
                       <div>{p.gmail || p.profile_email || '-'}</div>

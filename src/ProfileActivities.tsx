@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from './api';
-import { ArrowLeft, Download, Plus, Save, Trash2, Edit2, ListChecks, Search, Eye, ThumbsUp, MessageSquare, Globe, MapPin, Star, Navigation, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Download, Plus, Save, Trash2, Edit2, ListChecks, Search, Eye, ThumbsUp, MessageSquare, Globe, MapPin, Star, Navigation, RefreshCw, Camera } from 'lucide-react';
 
 interface ProfileItem {
   id: number;
@@ -118,7 +118,30 @@ const ProfileActivities: React.FC = () => {
     setActionType(act);
     setIsBulkMode(false);
     setBulkText('');
-    setFormValues({});
+    let defaultValues: any = {};
+    if (platform === 'gmaps') {
+      if (act === 'gmaps_search') defaultValues = { kind: 1 };
+      else if (act === 'gmaps_visit') defaultValues = { kind: 2 };
+      else if (act === 'gmaps_navigate') defaultValues = { kind: 3 };
+      else if (act === 'gmaps_review') defaultValues = { kind: 4, rating: 5 };
+      else if (act === 'gmaps_photo') defaultValues = { kind: 5 };
+    } else if (platform === 'youtube') {
+      if (act === 'view_video' || act === 'search') defaultValues = { kind: 1 };
+      else if (act === 'likes_video') defaultValues = { kind: 2 };
+      else if (act === 'comment_video') defaultValues = { kind: 3 };
+    } else if (platform === 'quora') {
+      if (act === 'view_question' || act === 'search') defaultValues = { kind: 1 };
+      else if (act === 'view_answer') defaultValues = { kind: 2 };
+      else if (act === 'upvote_question') defaultValues = { kind: 3 };
+      else if (act === 'upvote_answer') defaultValues = { kind: 4 };
+      else if (act === 'comment_question') defaultValues = { kind: 5 };
+      else if (act === 'comment_answer') defaultValues = { kind: 6 };
+    } else if (platform === 'medium') {
+      if (act === 'view_post' || act === 'search') defaultValues = { kind: 1 };
+      else if (act === 'claps_post') defaultValues = { kind: 2 };
+      else if (act === 'comment_post') defaultValues = { kind: 3 };
+    }
+    setFormValues(defaultValues);
     setEditingId(null);
   };
 
@@ -127,8 +150,32 @@ const ProfileActivities: React.FC = () => {
     if (!profileId) return;
 
     try {
+      const payload = { ...formValues };
+      if (platform === 'gmaps' && payload.kind === undefined) {
+        if (actionType === 'gmaps_photo') payload.kind = 5;
+        else if (actionType === 'gmaps_review') payload.kind = 4;
+        else if (actionType === 'gmaps_navigate') payload.kind = 3;
+        else if (actionType === 'gmaps_visit') payload.kind = 2;
+        else payload.kind = 1;
+      } else if (platform === 'youtube' && payload.kind === undefined) {
+        if (actionType === 'likes_video') payload.kind = 2;
+        else if (actionType === 'comment_video') payload.kind = 3;
+        else payload.kind = 1;
+      } else if (platform === 'quora' && payload.kind === undefined) {
+        if (actionType === 'view_answer') payload.kind = 2;
+        else if (actionType === 'upvote_question') payload.kind = 3;
+        else if (actionType === 'upvote_answer') payload.kind = 4;
+        else if (actionType === 'comment_question') payload.kind = 5;
+        else if (actionType === 'comment_answer') payload.kind = 6;
+        else payload.kind = 1;
+      } else if (platform === 'medium' && payload.kind === undefined) {
+        if (actionType === 'claps_post') payload.kind = 2;
+        else if (actionType === 'comment_post') payload.kind = 3;
+        else payload.kind = 1;
+      }
+
       if (editingId) {
-        await api.patch(`/activities/${platform}/${editingId}`, formValues);
+        await api.patch(`/activities/${platform}/${editingId}`, payload);
       } else if (isBulkMode) {
         const queries = bulkText.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
         if (queries.length === 0) {
@@ -144,7 +191,7 @@ const ProfileActivities: React.FC = () => {
       } else {
         await api.post(`/activities/${platform}`, {
           profile_id: Number(profileId),
-          ...formValues,
+          ...payload,
         });
       }
       setFormValues({});
@@ -193,29 +240,30 @@ const ProfileActivities: React.FC = () => {
       return true; // google_search
     }
     if (platform === 'gmaps') {
-      if (actionType === 'gmaps_visit') return Boolean(act.place_id && !act.review_text);
-      if (actionType === 'gmaps_search') return Boolean(act.search_query);
-      if (actionType === 'gmaps_navigate') return Boolean(act.navigate_location);
-      if (actionType === 'gmaps_review') return Boolean(act.review_text);
+      if (actionType === 'gmaps_visit') return act.kind === 2 || Boolean(act.place_id && !act.review_text && act.kind !== 5);
+      if (actionType === 'gmaps_search') return act.kind === 1 || Boolean(act.search_query);
+      if (actionType === 'gmaps_navigate') return act.kind === 3 || Boolean(act.navigate_location);
+      if (actionType === 'gmaps_review') return act.kind === 4 || Boolean(act.review_text);
+      if (actionType === 'gmaps_photo') return act.kind === 5;
       return true; // gmaps_all
     }
 
     if (actionType === 'search') return Boolean(act.search_query);
     if (platform === 'youtube') {
-      if (actionType === 'view_video') return Boolean(act.video_id && !act.comment_video_id && !act.likes_video_id);
-      if (actionType === 'likes_video') return Boolean(act.likes_video_id);
-      if (actionType === 'comment_video') return Boolean(act.comment_video_id);
+      if (actionType === 'view_video') return act.kind === 1 || Boolean(act.video_id && !act.comment_video_id && !act.likes_video_id);
+      if (actionType === 'likes_video') return act.kind === 2 || Boolean(act.likes_video_id);
+      if (actionType === 'comment_video') return act.kind === 3 || Boolean(act.comment_video_id);
     } else if (platform === 'quora') {
-      if (actionType === 'view_question') return Boolean(act.question_id && !act.comment_question_id && !act.upvote_question_id);
-      if (actionType === 'view_answer') return Boolean(act.answer_id && !act.comment_answer_id && !act.upvote_answer_id);
-      if (actionType === 'upvote_question') return Boolean(act.upvote_question_id);
-      if (actionType === 'upvote_answer') return Boolean(act.upvote_answer_id);
-      if (actionType === 'comment_question') return Boolean(act.comment_question_id);
-      if (actionType === 'comment_answer') return Boolean(act.comment_answer_id);
+      if (actionType === 'view_question') return act.kind === 1 || Boolean(act.question_id && !act.comment_question_id && !act.upvote_question_id);
+      if (actionType === 'view_answer') return act.kind === 2 || Boolean(act.answer_id && !act.comment_answer_id && !act.upvote_answer_id);
+      if (actionType === 'upvote_question') return act.kind === 3 || Boolean(act.upvote_question_id);
+      if (actionType === 'upvote_answer') return act.kind === 4 || Boolean(act.upvote_answer_id);
+      if (actionType === 'comment_question') return act.kind === 5 || Boolean(act.comment_question_id);
+      if (actionType === 'comment_answer') return act.kind === 6 || Boolean(act.comment_answer_id);
     } else if (platform === 'medium') {
-      if (actionType === 'view_post') return Boolean(act.post_id && !act.comment_post_id && !act.claps_post_id);
-      if (actionType === 'claps_post') return Boolean(act.claps_post_id);
-      if (actionType === 'comment_post') return Boolean(act.comment_post_id);
+      if (actionType === 'view_post') return act.kind === 1 || Boolean(act.post_id && !act.comment_post_id && !act.claps_post_id);
+      if (actionType === 'claps_post') return act.kind === 2 || Boolean(act.claps_post_id);
+      if (actionType === 'comment_post') return act.kind === 3 || Boolean(act.comment_post_id);
     }
     return true;
   });
@@ -460,6 +508,14 @@ const ProfileActivities: React.FC = () => {
               >
                 <Star size={14} /> Dejar Reseña / Rating
               </button>
+              <button
+                type="button"
+                className={`btn ${actionType === 'gmaps_photo' ? 'btn-primary' : 'btn-secondary'}`}
+                style={{ fontSize: '0.85rem' }}
+                onClick={() => handleActionTypeChange('gmaps_photo')}
+              >
+                <Camera size={14} /> Subir Imagen
+              </button>
             </>
           )}
 
@@ -699,60 +755,109 @@ const ProfileActivities: React.FC = () => {
             {/* GMAPS INPUTS */}
             {platform === 'gmaps' && (
               <>
-                <div className="form-group">
-                  <label>Place ID / Link Google Maps (Opcional)</label>
-                  <input
-                    type="text"
-                    className="input-field"
-                    placeholder="Ej. ChIJN1t_tDeuEmsRUsoyG83frY4 o URL de Maps"
-                    value={formValues.place_id || ''}
-                    onChange={(e) => setFormValues({ ...formValues, place_id: e.target.value })}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Search Query (Búsqueda en el mapa)</label>
-                  <input
-                    type="text"
-                    className="input-field"
-                    placeholder="Ej. restaurantes cerca de mí"
-                    value={formValues.search_query || ''}
-                    onChange={(e) => setFormValues({ ...formValues, search_query: e.target.value })}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Navigate Location (Navegar a ubicación)</label>
-                  <input
-                    type="text"
-                    className="input-field"
-                    placeholder="Ej. 25.7617, -80.1918 o Dirección"
-                    value={formValues.navigate_location || ''}
-                    onChange={(e) => setFormValues({ ...formValues, navigate_location: e.target.value })}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Rating / Calificación (1 a 5 estrellas)</label>
-                  <select
-                    className="input-field"
-                    value={formValues.rating !== undefined ? formValues.rating : 5}
-                    onChange={(e) => setFormValues({ ...formValues, rating: Number(e.target.value) })}
-                  >
-                    <option value={5}>⭐⭐⭐⭐⭐ 5 Estrellas</option>
-                    <option value={4}>⭐⭐⭐⭐ 4 Estrellas</option>
-                    <option value={3}>⭐⭐⭐ 3 Estrellas</option>
-                    <option value={2}>⭐⭐ 2 Estrellas</option>
-                    <option value={1}>⭐ 1 Estrella</option>
-                  </select>
-                </div>
-                <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                  <label>Review Text (Texto de Reseña)</label>
-                  <textarea
-                    className="input-field"
-                    rows={3}
-                    placeholder="Ej. Excelente servicio y atención, muy recomendado!"
-                    value={formValues.review_text || ''}
-                    onChange={(e) => setFormValues({ ...formValues, review_text: e.target.value })}
-                  />
-                </div>
+                {actionType === 'gmaps_photo' && (
+                  <div style={{ gridColumn: 'span 2', background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.25)', borderRadius: '0.5rem', padding: '0.85rem 1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+                    <Camera size={24} color="#2563eb" style={{ flexShrink: 0 }} />
+                    <div style={{ fontSize: '0.85rem' }}>
+                      <strong style={{ color: '#2563eb' }}>Subir Imagen a Ficha de Google Maps (kind = 5)</strong>
+                      <p style={{ margin: '0.2rem 0 0', color: 'var(--text-muted)' }}>
+                        El bot Moshi tomará la siguiente foto disponible de la carpeta local <code>moshi/next_uploads/</code> y la publicará en la ficha del link de Google Maps indicado. Al terminar, la foto se moverá a <code>uploaded/</code> y la actividad se marcará como completada (status = 1).
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {(actionType === 'gmaps_all' || actionType === 'gmaps_visit' || actionType === 'gmaps_review' || actionType === 'gmaps_photo' || actionType === 'gmaps_navigate') && (
+                  <div className="form-group" style={{ gridColumn: actionType === 'gmaps_photo' ? 'span 2' : undefined }}>
+                    <label>
+                      {actionType === 'gmaps_photo' ? 'Link de Google Maps de la Ficha (Place ID / URL)' : 'Place ID / Link Google Maps'}
+                      {actionType === 'gmaps_photo' && <span style={{ color: '#ef4444' }}> *</span>}
+                    </label>
+                    <input
+                      type="text"
+                      className="input-field"
+                      placeholder="https://maps.app.goo.gl/... o URL de Google Maps"
+                      value={formValues.place_id || ''}
+                      onChange={(e) => setFormValues({ ...formValues, place_id: e.target.value, kind: actionType === 'gmaps_photo' ? 5 : formValues.kind || 2 })}
+                      required={actionType === 'gmaps_photo'}
+                    />
+                  </div>
+                )}
+
+                {(actionType === 'gmaps_all' || actionType === 'gmaps_search') && (
+                  <div className="form-group" style={{ gridColumn: actionType === 'gmaps_search' ? 'span 2' : undefined }}>
+                    <label>Search Query (Búsqueda en el mapa)</label>
+                    <input
+                      type="text"
+                      className="input-field"
+                      placeholder="Ej. restaurantes cerca de mí"
+                      value={formValues.search_query || ''}
+                      onChange={(e) => setFormValues({ ...formValues, search_query: e.target.value, kind: 1 })}
+                      required={actionType === 'gmaps_search'}
+                    />
+                  </div>
+                )}
+
+                {(actionType === 'gmaps_all' || actionType === 'gmaps_navigate') && (
+                  <div className="form-group" style={{ gridColumn: actionType === 'gmaps_navigate' ? 'span 2' : undefined }}>
+                    <label>Navigate Location (Dirección o Coordenadas a navegar)</label>
+                    <input
+                      type="text"
+                      className="input-field"
+                      placeholder="Ej. 25.7617, -80.1918 o Dirección de destino"
+                      value={formValues.navigate_location || ''}
+                      onChange={(e) => setFormValues({ ...formValues, navigate_location: e.target.value, kind: 3 })}
+                      required={actionType === 'gmaps_navigate'}
+                    />
+                  </div>
+                )}
+
+                {(actionType === 'gmaps_all' || actionType === 'gmaps_review') && (
+                  <>
+                    <div className="form-group">
+                      <label>Rating / Calificación (1 a 5 estrellas)</label>
+                      <select
+                        className="input-field"
+                        value={formValues.rating !== undefined ? formValues.rating : 5}
+                        onChange={(e) => setFormValues({ ...formValues, rating: Number(e.target.value), kind: 4 })}
+                      >
+                        <option value={5}>⭐⭐⭐⭐⭐ 5 Estrellas</option>
+                        <option value={4}>⭐⭐⭐⭐ 4 Estrellas</option>
+                        <option value={3}>⭐⭐⭐ 3 Estrellas</option>
+                        <option value={2}>⭐⭐ 2 Estrellas</option>
+                        <option value={1}>⭐ 1 Estrella</option>
+                      </select>
+                    </div>
+                    <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                      <label>Review Text (Texto de Reseña)</label>
+                      <textarea
+                        className="input-field"
+                        rows={3}
+                        placeholder="Ej. Excelente servicio y atención, muy recomendado!"
+                        value={formValues.review_text || ''}
+                        onChange={(e) => setFormValues({ ...formValues, review_text: e.target.value, kind: 4 })}
+                        required={actionType === 'gmaps_review'}
+                      />
+                    </div>
+                  </>
+                )}
+
+                {actionType === 'gmaps_all' && (
+                  <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                    <label>Tipo de Acción (kind)</label>
+                    <select
+                      className="input-field"
+                      value={formValues.kind || 1}
+                      onChange={(e) => setFormValues({ ...formValues, kind: Number(e.target.value) })}
+                    >
+                      <option value={1}>1: Búsqueda en Maps</option>
+                      <option value={2}>2: Visitar Link / Place ID</option>
+                      <option value={3}>3: Navegar Ubicación (Cómo llegar)</option>
+                      <option value={4}>4: Dejar Reseña / Rating</option>
+                      <option value={5}>5: Subir Imagen (next_uploads)</option>
+                    </select>
+                  </div>
+                )}
               </>
             )}
 
@@ -1078,9 +1183,106 @@ const ProfileActivities: React.FC = () => {
                     <tr key={act.id} style={{ borderBottom: '1px solid var(--border)' }}>
                       <td style={{ padding: '0.75rem', fontWeight: 'bold' }}>#{act.id}</td>
                       <td style={{ padding: '0.75rem' }}>
+                        {platform === 'gmaps' && (
+                          <div style={{ marginBottom: '0.35rem' }}>
+                            {act.kind === 5 ? (
+                              <span className="badge" style={{ background: 'rgba(34, 197, 94, 0.15)', color: '#16a34a', fontWeight: 'bold' }}>
+                                📸 Kind 5: Subir Imagen (next_uploads)
+                              </span>
+                            ) : act.kind === 4 ? (
+                              <span className="badge" style={{ background: 'rgba(234, 179, 8, 0.15)', color: '#ca8a04', fontWeight: 'bold' }}>
+                                ⭐ Kind 4: Dejar Reseña
+                              </span>
+                            ) : act.kind === 3 ? (
+                              <span className="badge" style={{ background: 'rgba(249, 115, 22, 0.15)', color: '#c2410c', fontWeight: 'bold' }}>
+                                🧭 Kind 3: Navegar Ubicación
+                              </span>
+                            ) : act.kind === 2 ? (
+                              <span className="badge" style={{ background: 'rgba(168, 85, 247, 0.15)', color: '#7e22ce', fontWeight: 'bold' }}>
+                                🌐 Kind 2: Visitar Ficha / Link
+                              </span>
+                            ) : (
+                              <span className="badge" style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#2563eb', fontWeight: 'bold' }}>
+                                🔍 Kind 1: Búsqueda en Maps
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {platform === 'youtube' && (
+                          <div style={{ marginBottom: '0.35rem' }}>
+                            {act.kind === 3 ? (
+                              <span className="badge" style={{ background: 'rgba(168, 85, 247, 0.15)', color: '#7e22ce', fontWeight: 'bold' }}>
+                                💬 Kind 3: Comentar Video
+                              </span>
+                            ) : act.kind === 2 ? (
+                              <span className="badge" style={{ background: 'rgba(234, 88, 12, 0.15)', color: '#ea580c', fontWeight: 'bold' }}>
+                                👍 Kind 2: Me Gusta Video
+                              </span>
+                            ) : (
+                              <span className="badge" style={{ background: 'rgba(220, 38, 38, 0.15)', color: '#dc2626', fontWeight: 'bold' }}>
+                                ▶️ Kind 1: Ver Video
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {platform === 'quora' && (
+                          <div style={{ marginBottom: '0.35rem' }}>
+                            {act.kind === 6 ? (
+                              <span className="badge" style={{ background: 'rgba(147, 51, 234, 0.15)', color: '#9333ea', fontWeight: 'bold' }}>
+                                💬 Kind 6: Comentar Respuesta
+                              </span>
+                            ) : act.kind === 5 ? (
+                              <span className="badge" style={{ background: 'rgba(168, 85, 247, 0.15)', color: '#7e22ce', fontWeight: 'bold' }}>
+                                💬 Kind 5: Comentar Pregunta
+                              </span>
+                            ) : act.kind === 4 ? (
+                              <span className="badge" style={{ background: 'rgba(249, 115, 22, 0.15)', color: '#ea580c', fontWeight: 'bold' }}>
+                                👍 Kind 4: Me Gusta Respuesta
+                              </span>
+                            ) : act.kind === 3 ? (
+                              <span className="badge" style={{ background: 'rgba(234, 179, 8, 0.15)', color: '#ca8a04', fontWeight: 'bold' }}>
+                                👍 Kind 3: Me Gusta Pregunta
+                              </span>
+                            ) : act.kind === 2 ? (
+                              <span className="badge" style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#2563eb', fontWeight: 'bold' }}>
+                                💡 Kind 2: Ver Respuesta
+                              </span>
+                            ) : (
+                              <span className="badge" style={{ background: 'rgba(185, 28, 28, 0.15)', color: '#b91c1c', fontWeight: 'bold' }}>
+                                ❓ Kind 1: Ver Pregunta
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {platform === 'medium' && (
+                          <div style={{ marginBottom: '0.35rem' }}>
+                            {act.kind === 3 ? (
+                              <span className="badge" style={{ background: 'rgba(168, 85, 247, 0.15)', color: '#7e22ce', fontWeight: 'bold' }}>
+                                💬 Kind 3: Comentar Post
+                              </span>
+                            ) : act.kind === 2 ? (
+                              <span className="badge" style={{ background: 'rgba(34, 197, 94, 0.15)', color: '#16a34a', fontWeight: 'bold' }}>
+                                👏 Kind 2: Me Gusta Post (Claps)
+                              </span>
+                            ) : (
+                              <span className="badge" style={{ background: 'rgba(75, 85, 99, 0.15)', color: '#374151', fontWeight: 'bold' }}>
+                                📖 Kind 1: Ver Post
+                              </span>
+                            )}
+                          </div>
+                        )}
                         {act.link && <div><strong>Link:</strong> <a href={act.link} target="_blank" rel="noreferrer" style={{ color: 'var(--primary)' }}>{act.link}</a></div>}
                         {act.search_query && <div><strong>Búsqueda:</strong> {act.search_query}</div>}
-                        {act.place_id && <div><strong>Place ID / Link:</strong> {act.place_id}</div>}
+                        {act.place_id && (
+                          <div>
+                            <strong>{act.kind === 5 ? 'Ficha / Link Maps:' : 'Place ID / Link:'}</strong>{' '}
+                            {act.place_id.startsWith('http') ? (
+                              <a href={act.place_id} target="_blank" rel="noreferrer" style={{ color: 'var(--primary)', wordBreak: 'break-all' }}>{act.place_id}</a>
+                            ) : (
+                              <span>{act.place_id}</span>
+                            )}
+                          </div>
+                        )}
                         {act.navigate_location && <div><strong>Navegar Ubicación:</strong> {act.navigate_location}</div>}
                         {act.review_text && <div><strong>Reseña:</strong> {act.review_text}</div>}
                         {act.rating !== undefined && act.rating !== null && platform === 'gmaps' && <div><strong>Rating:</strong> {'⭐'.repeat(act.rating)} ({act.rating}/5)</div>}

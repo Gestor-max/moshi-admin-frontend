@@ -29,6 +29,7 @@ interface ProfileItem {
   gmail?: string;
   profile_email?: string;
   pais_iso?: string;
+  archived_at?: string;
   proxy?: ProxyItem;
   location?: LocationItem;
   location_proxy?: LocationItem;
@@ -142,6 +143,7 @@ const ArchivedProfiles: React.FC = () => {
               <tr style={{ background: 'var(--surface-hover)', borderBottom: '1px solid var(--border)' }}>
                 <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>ID</th>
                 <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Nombre Completo</th>
+                <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Fecha Archivado</th>
                 <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Etiqueta</th>
                 <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Gmail</th>
                 <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Proxy</th>
@@ -162,6 +164,16 @@ const ArchivedProfiles: React.FC = () => {
                         {p.name} {p.lastname}
                       </div>
                       <span style={{ fontSize: '0.75rem', color: '#f59e0b' }}>Archivado</span>
+                    </td>
+                    <td style={{ padding: '1rem', fontSize: '0.85rem' }}>
+                      {p.archived_at ? (
+                        <div>
+                          <div style={{ fontWeight: 600, color: '#f59e0b' }}>📦 {new Date(p.archived_at).toLocaleDateString()}</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{new Date(p.archived_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                        </div>
+                      ) : (
+                        <span style={{ color: 'var(--text-muted)' }}>Sin fecha</span>
+                      )}
                     </td>
                     <td style={{ padding: '1rem' }}>
                       {p.tag ? (
