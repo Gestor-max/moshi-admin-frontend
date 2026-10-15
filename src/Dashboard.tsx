@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import API_BASE_URL from './api';
+import { api } from './api';
 import { useAuth } from './AuthContext';
 import { useLanguage } from './LanguageContext';
 import {
@@ -18,7 +17,9 @@ import {
   Globe,
   Video,
   MessageSquare,
-  FileText
+  FileText,
+  AlertCircle,
+  RefreshCw
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -36,30 +37,52 @@ const Dashboard: React.FC = () => {
   const { t } = useLanguage();
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeTabPlatform, setActiveTabPlatform] = useState<string>('gmaps');
   const [hoveredDay, setHoveredDay] = useState<any>(null);
 
   const fetchStats = async () => {
+    setLoading(true);
+    setError(null);
     try {
-      const res = await axios.get(`${API_BASE_URL}/stats`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await api.get('/stats');
       setStats(res.data);
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      console.error('Error fetching dashboard stats:', err);
+      setError(err?.response?.data?.message || err?.message || 'Error al cargar estadísticas');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchStats();
-  }, []);
+    if (token) {
+      fetchStats();
+    }
+  }, [token]);
 
   if (loading) {
     return (
-      <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-        {t('dashboard_loading_stats')}
+      <div style={{ padding: '4rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.75rem', fontSize: '1rem' }}>
+          <RefreshCw size={20} className="spinning" />
+          {t('dashboard_loading_stats')}
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{ padding: '3rem', maxWidth: '600px', margin: '2rem auto', textAlign: 'center' }}>
+        <div className="card" style={{ padding: '2rem', border: '1px solid var(--border-color)' }}>
+          <AlertCircle size={40} color="#ef4444" style={{ marginBottom: '1rem' }} />
+          <h2 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>No se pudieron cargar las estadísticas</h2>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>{error}</p>
+          <button className="btn btn-primary" onClick={fetchStats} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+            <RefreshCw size={16} /> Reintentar
+          </button>
+        </div>
       </div>
     );
   }
