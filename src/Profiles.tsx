@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { api } from './api';
 import { useLanguage } from './LanguageContext';
-import { UserCheck, Plus, Search, Trash2, Edit2, X, Save, Link as LinkIcon, ListChecks, AlertCircle, Archive, Skull } from 'lucide-react';
+import { useAuth } from './AuthContext';
+import { UserCheck, Plus, Search, Trash2, Edit2, X, Save, Link as LinkIcon, ListChecks, AlertCircle, Archive, Skull, Send, CheckCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 interface ProxyItem {
@@ -98,6 +99,7 @@ interface ProfileItem {
 
 const Profiles: React.FC = () => {
   const { t } = useLanguage();
+  const { user } = useAuth();
   const [profiles, setProfiles] = useState<ProfileItem[]>([]);
   const [websites, setWebsites] = useState<WebsiteItem[]>([]);
   const [search, setSearch] = useState('');
@@ -110,6 +112,27 @@ const Profiles: React.FC = () => {
   const [sitePassword, setSitePassword] = useState('');
   const [siteCookie, setSiteCookie] = useState('');
   const [modalError, setModalError] = useState('');
+
+  // Modal para Transferir a Admin
+  const [confirmTransferProfile, setConfirmTransferProfile] = useState<ProfileItem | null>(null);
+  const [transferringId, setTransferringId] = useState<number | null>(null);
+  const [transferSuccess, setTransferSuccess] = useState<string | null>(null);
+
+  const handleTransferToAdmin = async (profile: ProfileItem) => {
+    try {
+      setTransferringId(profile.id);
+      await api.patch(`/profiles/${profile.id}/transfer-to-admin`);
+      setConfirmTransferProfile(null);
+      setTransferSuccess(t('send_to_admin_success'));
+      setTimeout(() => setTransferSuccess(null), 4000);
+      fetchProfiles(search);
+    } catch (err: any) {
+      console.error(err);
+      alert(err.response?.data?.message || 'Error al transferir el perfil al administrador');
+    } finally {
+      setTransferringId(null);
+    }
+  };
 
   const fetchProfiles = async (searchQuery = '') => {
     try {
@@ -222,6 +245,24 @@ const Profiles: React.FC = () => {
           <Plus size={18} /> {t('new_profile')}
         </Link>
       </div>
+
+      {transferSuccess && (
+        <div style={{
+          padding: '0.85rem 1rem',
+          marginBottom: '1.25rem',
+          borderRadius: '8px',
+          background: 'rgba(16, 185, 129, 0.15)',
+          color: '#10b981',
+          border: '1px solid rgba(16, 185, 129, 0.3)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.6rem',
+          fontSize: '0.9rem'
+        }}>
+          <CheckCircle size={18} />
+          <span>{transferSuccess}</span>
+        </div>
+      )}
 
       {/* Buscador */}
       <form onSubmit={handleSearch} style={{ marginBottom: '1.5rem', display: 'flex', gap: '0.75rem' }}>
@@ -376,6 +417,25 @@ const Profiles: React.FC = () => {
                         >
                           <ListChecks size={14} /> Actividades
                         </Link>
+                        {user?.rol === 2 && (
+                          <button
+                            className="btn btn-secondary"
+                            style={{
+                              padding: '0.35rem 0.6rem',
+                              fontSize: '0.8rem',
+                              color: '#059669',
+                              borderColor: 'rgba(5, 150, 105, 0.4)',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.3rem',
+                            }}
+                            title={t('send_to_admin')}
+                            onClick={() => setConfirmTransferProfile(p)}
+                            disabled={transferringId === p.id}
+                          >
+                            <Send size={14} /> {t('send_to_admin')}
+                          </button>
+                        )}
                         <button
                           className="btn btn-secondary"
                           style={{ padding: '0.35rem 0.6rem', fontSize: '0.8rem' }}
@@ -499,6 +559,64 @@ const Profiles: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para Confirmar Enviar a Admin */}
+      {confirmTransferProfile && (
+        <div className="modal-backdrop">
+          <div className="modal-content" style={{ maxWidth: '480px' }}>
+            <div className="modal-header">
+              <h2>{t('send_to_admin_title')}</h2>
+              <button
+                className="modal-close"
+                onClick={() => setConfirmTransferProfile(null)}
+                disabled={transferringId !== null}
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="modal-body" style={{ padding: '1.25rem 0' }}>
+              <p style={{ marginBottom: '1rem', fontSize: '0.95rem', lineHeight: '1.5' }}>
+                {t('send_to_admin_confirm')} (<strong>{confirmTransferProfile.name} {confirmTransferProfile.lastname}</strong>)
+              </p>
+              <div
+                style={{
+                  padding: '0.75rem 1rem',
+                  borderRadius: '6px',
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  border: '1px solid rgba(239, 68, 68, 0.25)',
+                  color: '#ef4444',
+                  fontSize: '0.85rem',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '0.5rem',
+                }}
+              >
+                <AlertCircle size={18} style={{ flexShrink: 0, marginTop: '2px' }} />
+                <span>{t('send_to_admin_warning')}</span>
+              </div>
+            </div>
+            <div className="modal-footer" style={{ padding: 0, marginTop: '1.5rem', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setConfirmTransferProfile(null)}
+                disabled={transferringId !== null}
+              >
+                {t('cancel')}
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                style={{ background: '#059669', borderColor: '#059669' }}
+                onClick={() => handleTransferToAdmin(confirmTransferProfile)}
+                disabled={transferringId !== null}
+              >
+                <Send size={16} /> {transferringId ? '...' : t('confirm_send')}
+              </button>
+            </div>
           </div>
         </div>
       )}

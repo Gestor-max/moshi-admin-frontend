@@ -41,6 +41,12 @@ export const translations = {
     link: "Vincular",
     no_results: "No se encontraron elementos.",
     password: "Contraseña",
+    send_to_admin: "Enviar a Admin",
+    send_to_admin_title: "Enviar a Administrador",
+    send_to_admin_confirm: "¿Estás seguro de que deseas enviar este perfil al Administrador principal?",
+    send_to_admin_warning: "Una vez transferido, la propiedad del perfil pasará al administrador y dejará de aparecer en tu cuenta.",
+    send_to_admin_success: "Perfil enviado exitosamente al Administrador.",
+    confirm_send: "Confirmar Envío",
     
     // Dashboard
     dashboard_title: "Panel de Inicio",
@@ -188,6 +194,12 @@ export const translations = {
     link: "Link",
     no_results: "No items found.",
     password: "Password",
+    send_to_admin: "Send to Admin",
+    send_to_admin_title: "Send to Administrator",
+    send_to_admin_confirm: "Are you sure you want to send this profile to the primary Administrator?",
+    send_to_admin_warning: "Once transferred, profile ownership will belong to the administrator and will no longer appear in your account.",
+    send_to_admin_success: "Profile sent to Administrator successfully.",
+    confirm_send: "Confirm Send",
     
     // Dashboard
     dashboard_title: "Home Dashboard",
