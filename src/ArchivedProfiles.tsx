@@ -31,6 +31,7 @@ interface ProfileItem {
   pais_iso?: string;
   archived_at?: string;
   proxy?: ProxyItem;
+  proxy2?: ProxyItem;
   location?: LocationItem;
   location_proxy?: LocationItem;
   location_proxy_alt?: LocationItem;
@@ -203,13 +204,20 @@ const ArchivedProfiles: React.FC = () => {
                       {p.gmail || '-'}
                     </td>
                     <td style={{ padding: '1rem', fontSize: '0.85rem' }}>
-                      {p.proxy ? (
-                        <span className="badge" style={{ background: 'rgba(168, 85, 247, 0.15)', color: '#a855f7' }}>
-                          {p.proxy.ip}:{p.proxy.port}
-                        </span>
-                      ) : (
-                        <span style={{ color: 'var(--text-muted)' }}>Sin Proxy</span>
-                      )}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', alignItems: 'flex-start' }}>
+                        {p.proxy ? (
+                          <span className="badge" style={{ background: 'rgba(168, 85, 247, 0.15)', color: '#a855f7' }}>
+                            {p.proxy.ip}:{p.proxy.port}
+                          </span>
+                        ) : (
+                          <span style={{ color: 'var(--text-muted)' }}>Sin Proxy</span>
+                        )}
+                        {p.proxy2 && (
+                          <span className="badge" style={{ background: 'rgba(236, 72, 153, 0.15)', color: '#ec4899' }} title="Proxy 2 Secundario">
+                            P2: {p.proxy2.ip}:{p.proxy2.port}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td style={{ padding: '1rem', fontSize: '0.85rem' }}>
                       {p.location ? (
