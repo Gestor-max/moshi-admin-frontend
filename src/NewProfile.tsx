@@ -374,6 +374,11 @@ const NewProfile: React.FC = () => {
                     </option>
                   ))}
                 </select>
+                {formData.location_id && (
+                  <small style={{ color: '#38bdf8', marginTop: '0.35rem', display: 'block' }}>
+                    ℹ️ Al guardar el perfil, se copiarán automáticamente las actividades plantilla de esta ubicación como actividades pendientes.
+                  </small>
+                )}
               </div>
 
               <div className="form-group">

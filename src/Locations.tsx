@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from './api';
 import { useLanguage } from './LanguageContext';
-import { MapPin, Plus, Search, Trash2, Edit2, X, Save, Building2 } from 'lucide-react';
+import { MapPin, Plus, Search, Trash2, Edit2, X, Save, Building2, ListChecks } from 'lucide-react';
 
 interface LocationItem {
   id: number;
@@ -9,7 +10,13 @@ interface LocationItem {
   location: string;
   user_id: number;
   _count?: {
-    profiles: number;
+    profiles?: number;
+    youtube_activities?: number;
+    google_activities?: number;
+    gmaps_activities?: number;
+    quora_activities?: number;
+    medium_activities?: number;
+    browser_activities?: number;
   };
 }
 
@@ -126,98 +133,134 @@ const Locations: React.FC = () => {
         </div>
       ) : (
         <div className="list-container" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1rem' }}>
-          {locations.map((loc) => (
-            <div
-              key={loc.id}
-              className="card"
-              style={{
-                background: 'var(--card-bg, #1e293b)',
-                borderRadius: '0.75rem',
-                padding: '1.25rem',
-                border: '1px solid var(--border-color, #334155)',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-              }}
-            >
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
-                  <div
+          {locations.map((loc) => {
+            const totalActivities =
+              (loc._count?.youtube_activities || 0) +
+              (loc._count?.google_activities || 0) +
+              (loc._count?.gmaps_activities || 0) +
+              (loc._count?.quora_activities || 0) +
+              (loc._count?.medium_activities || 0) +
+              (loc._count?.browser_activities || 0);
+
+            return (
+              <div
+                key={loc.id}
+                className="card"
+                style={{
+                  background: 'var(--card-bg)',
+                  borderRadius: '0.75rem',
+                  padding: '1.25rem',
+                  border: '1px solid var(--border)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                    <div
+                      style={{
+                        background: 'rgba(99, 102, 241, 0.15)',
+                        color: 'var(--primary)',
+                        padding: '0.6rem',
+                        borderRadius: '0.5rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <MapPin size={22} />
+                    </div>
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--text)' }}>
+                        {loc.location}
+                      </h3>
+                      <span style={{ fontSize: '0.85rem', color: 'var(--text-muted, #94a3b8)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <Building2 size={14} /> {loc.state}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted, #94a3b8)', marginTop: '0.5rem', display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
+                    <span>ID #{loc.id}</span>
+                    <span>•</span>
+                    <span>{loc._count?.profiles || 0} perfiles</span>
+                    <span>•</span>
+                    <span style={{ color: totalActivities > 0 ? '#38bdf8' : 'var(--text-muted)', fontWeight: totalActivities > 0 ? 600 : 'normal' }}>
+                      {totalActivities} actividades plantilla
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1.25rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border)' }}>
+                  <Link
+                    to={`/locations/${loc.id}/activities`}
                     style={{
+                      flex: 1.4,
+                      padding: '0.45rem 0.5rem',
                       background: 'rgba(99, 102, 241, 0.15)',
-                      color: 'var(--primary, #6366f1)',
-                      padding: '0.6rem',
-                      borderRadius: '0.5rem',
+                      border: '1px solid rgba(99, 102, 241, 0.35)',
+                      borderRadius: '0.375rem',
+                      color: '#818cf8',
+                      textDecoration: 'none',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.35rem',
+                      fontSize: '0.85rem',
+                      fontWeight: 500,
+                    }}
+                  >
+                    <ListChecks size={15} /> Actividades ({totalActivities})
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => setEditingLocation(loc)}
+                    style={{
+                      flex: 1,
+                      padding: '0.4rem',
+                      background: 'rgba(255,255,255,0.05)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '0.375rem',
+                      color: 'var(--text)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.25rem',
+                      fontSize: '0.85rem',
+                    }}
+                  >
+                    <Edit2 size={15} /> {t('edit') || 'Editar'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(loc.id)}
+                    style={{
+                      padding: '0.4rem 0.6rem',
+                      background: 'rgba(239, 68, 68, 0.15)',
+                      border: '1px solid rgba(239, 68, 68, 0.3)',
+                      borderRadius: '0.375rem',
+                      color: '#ef4444',
+                      cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                     }}
                   >
-                    <MapPin size={22} />
-                  </div>
-                  <div>
-                    <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--text-main, #f8fafc)' }}>
-                      {loc.location}
-                    </h3>
-                    <span style={{ fontSize: '0.85rem', color: 'var(--text-muted, #94a3b8)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                      <Building2 size={14} /> {loc.state}
-                    </span>
-                  </div>
-                </div>
-
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted, #94a3b8)', marginTop: '0.5rem' }}>
-                  ID #{loc.id} • {loc._count?.profiles || 0} perfiles asignados
+                    <Trash2 size={15} />
+                  </button>
                 </div>
               </div>
-
-              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1.25rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-color, #334155)' }}>
-                <button
-                  type="button"
-                  onClick={() => setEditingLocation(loc)}
-                  style={{
-                    flex: 1,
-                    padding: '0.4rem',
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid var(--border-color, #334155)',
-                    borderRadius: '0.375rem',
-                    color: 'var(--text-main, #f8fafc)',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.25rem',
-                    fontSize: '0.85rem',
-                  }}
-                >
-                  <Edit2 size={15} /> {t('edit') || 'Editar'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleDelete(loc.id)}
-                  style={{
-                    padding: '0.4rem 0.6rem',
-                    background: 'rgba(239, 68, 68, 0.15)',
-                    border: '1px solid rgba(239, 68, 68, 0.3)',
-                    borderRadius: '0.375rem',
-                    color: '#ef4444',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Trash2 size={15} />
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
       {/* Modal Crear Ubicación */}
       {showCreateModal && (
         <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div className="modal-content" style={{ background: 'var(--card-bg, #1e293b)', padding: '2rem', borderRadius: '0.75rem', width: '100%', maxWidth: '450px', border: '1px solid var(--border-color, #334155)' }}>
+          <div className="modal-content" style={{ background: 'var(--card-bg)', padding: '2rem', borderRadius: '0.75rem', width: '100%', maxWidth: '450px', border: '1px solid var(--border)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h2 style={{ margin: 0, fontSize: '1.25rem' }}>{t('new_location') || 'Nueva Ubicación'}</h2>
               <button onClick={() => setShowCreateModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0 }}>
@@ -235,7 +278,7 @@ const Locations: React.FC = () => {
                   placeholder="ej. California, Texas, CDMX"
                   value={newState}
                   onChange={(e) => setNewState(e.target.value)}
-                  style={{ width: '100%', padding: '0.6rem', borderRadius: '0.375rem', border: '1px solid var(--border-color, #334155)', background: 'var(--bg-main, #0f172a)', color: 'white' }}
+                  style={{ width: '100%', padding: '0.6rem', borderRadius: '0.375rem', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
                 />
               </div>
               <div style={{ marginBottom: '1.5rem' }}>
@@ -248,14 +291,14 @@ const Locations: React.FC = () => {
                   placeholder="ej. Los Angeles, Austin, Polanco"
                   value={newLocationStr}
                   onChange={(e) => setNewLocationStr(e.target.value)}
-                  style={{ width: '100%', padding: '0.6rem', borderRadius: '0.375rem', border: '1px solid var(--border-color, #334155)', background: 'var(--bg-main, #0f172a)', color: 'white' }}
+                  style={{ width: '100%', padding: '0.6rem', borderRadius: '0.375rem', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
                 />
               </div>
               <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  style={{ width: 'auto', background: 'transparent', border: '1px solid var(--border-color, #334155)', color: 'var(--text-muted)' }}
+                  style={{ width: 'auto', background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)' }}
                 >
                   {t('cancel') || 'Cancelar'}
                 </button>
@@ -271,7 +314,7 @@ const Locations: React.FC = () => {
       {/* Modal Editar Ubicación */}
       {editingLocation && (
         <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div className="modal-content" style={{ background: 'var(--card-bg, #1e293b)', padding: '2rem', borderRadius: '0.75rem', width: '100%', maxWidth: '450px', border: '1px solid var(--border-color, #334155)' }}>
+          <div className="modal-content" style={{ background: 'var(--card-bg)', padding: '2rem', borderRadius: '0.75rem', width: '100%', maxWidth: '450px', border: '1px solid var(--border)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h2 style={{ margin: 0, fontSize: '1.25rem' }}>{t('edit_location') || 'Editar Ubicación'}</h2>
               <button onClick={() => setEditingLocation(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0 }}>
@@ -288,7 +331,7 @@ const Locations: React.FC = () => {
                   required
                   value={editingLocation.state}
                   onChange={(e) => setEditingLocation({ ...editingLocation, state: e.target.value })}
-                  style={{ width: '100%', padding: '0.6rem', borderRadius: '0.375rem', border: '1px solid var(--border-color, #334155)', background: 'var(--bg-main, #0f172a)', color: 'white' }}
+                  style={{ width: '100%', padding: '0.6rem', borderRadius: '0.375rem', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
                 />
               </div>
               <div style={{ marginBottom: '1.5rem' }}>
@@ -300,14 +343,14 @@ const Locations: React.FC = () => {
                   required
                   value={editingLocation.location}
                   onChange={(e) => setEditingLocation({ ...editingLocation, location: e.target.value })}
-                  style={{ width: '100%', padding: '0.6rem', borderRadius: '0.375rem', border: '1px solid var(--border-color, #334155)', background: 'var(--bg-main, #0f172a)', color: 'white' }}
+                  style={{ width: '100%', padding: '0.6rem', borderRadius: '0.375rem', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
                 />
               </div>
               <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
                 <button
                   type="button"
                   onClick={() => setEditingLocation(null)}
-                  style={{ width: 'auto', background: 'transparent', border: '1px solid var(--border-color, #334155)', color: 'var(--text-muted)' }}
+                  style={{ width: 'auto', background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)' }}
                 >
                   {t('cancel') || 'Cancelar'}
                 </button>

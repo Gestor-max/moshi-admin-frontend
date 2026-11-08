@@ -300,7 +300,7 @@ const Dashboard: React.FC = () => {
                         bottom: '105%',
                         left: '50%',
                         transform: 'translateX(-50%)',
-                        background: 'var(--surface, #1e293b)',
+                        background: 'var(--card-bg)',
                         color: 'var(--text, #fff)',
                         border: '1px solid var(--border)',
                         borderRadius: '0.5rem',

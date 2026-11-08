@@ -277,7 +277,7 @@ const ProfileActivities: React.FC = () => {
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <div style={{ background: '#2563eb', padding: '0.75rem', borderRadius: '0.75rem', color: 'white' }}>
+            <div style={{ background: 'var(--primary)', padding: '0.75rem', borderRadius: '0.75rem', color: 'white' }}>
               <ListChecks size={26} />
             </div>
             <div>

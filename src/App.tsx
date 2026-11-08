@@ -17,6 +17,7 @@ import ProfileActivities from './ProfileActivities';
 import Proxies from './Proxies';
 import NewProxy from './NewProxy';
 import Locations from './Locations';
+import LocationActivities from './LocationActivities';
 import Schedules from './Schedules';
 import Websites from './Websites';
 import LinkedProfiles from './LinkedProfiles';
@@ -69,6 +70,7 @@ function App() {
             <Route path="/proxies" element={<ProtectedRoute><Proxies /></ProtectedRoute>} />
             <Route path="/proxies/new" element={<ProtectedRoute><NewProxy /></ProtectedRoute>} />
             <Route path="/locations" element={<ProtectedRoute><Locations /></ProtectedRoute>} />
+            <Route path="/locations/:locationId/activities" element={<ProtectedRoute><LocationActivities /></ProtectedRoute>} />
             <Route path="/schedules" element={<ProtectedRoute><Schedules /></ProtectedRoute>} />
             <Route path="/linked-profiles" element={<ProtectedRoute><LinkedProfiles /></ProtectedRoute>} />
             <Route path="/automations" element={<ProtectedRoute><Automations /></ProtectedRoute>} />

@@ -253,7 +253,7 @@ const ArchivedProfiles: React.FC = () => {
                         <Link
                           to={`/profiles/${p.id}/activities`}
                           className="btn btn-secondary"
-                          style={{ padding: '0.35rem 0.6rem', fontSize: '0.8rem', background: '#2563eb', color: 'white', borderColor: '#2563eb', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+                          style={{ padding: '0.35rem 0.6rem', fontSize: '0.8rem', background: 'var(--primary)', color: 'white', borderColor: 'var(--primary)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
                           title="Ver Actividades"
                         >
                           <ListChecks size={14} /> Actividades

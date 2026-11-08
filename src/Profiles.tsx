@@ -414,7 +414,7 @@ const Profiles: React.FC = () => {
                         <span className="badge" style={{ background: '#10b98115', color: '#10b981', border: '1px solid #10b98130', fontSize: '0.75rem' }} title="Google Maps">
                           🗺️ {p._count?.gmaps_activities || 0}
                         </span>
-                        <span className="badge" style={{ background: '#6366f115', color: '#6366f1', border: '1px solid #6366f130', fontSize: '0.75rem' }} title="Sitios Web (Browser)">
+                        <span className="badge" style={{ background: 'rgba(249, 115, 22, 0.12)', color: '#f97316', border: '1px solid rgba(249, 115, 22, 0.3)', fontSize: '0.75rem' }} title="Sitios Web (Browser)">
                           🌐 {p._count?.browser_activities || 0}
                         </span>
                       </div>
@@ -424,7 +424,7 @@ const Profiles: React.FC = () => {
                         <Link
                           to={`/profiles/${p.id}/activities`}
                           className="btn btn-secondary"
-                          style={{ padding: '0.35rem 0.6rem', fontSize: '0.8rem', background: '#2563eb', color: 'white', borderColor: '#2563eb', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+                          style={{ padding: '0.35rem 0.6rem', fontSize: '0.8rem', background: 'var(--primary)', color: 'white', borderColor: 'var(--primary)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
                           title="Ver y Gestionar Actividades"
                         >
                           <ListChecks size={14} /> Actividades

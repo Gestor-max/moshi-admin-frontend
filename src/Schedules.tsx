@@ -389,7 +389,7 @@ const Schedules: React.FC = () => {
         >
           <div
             style={{
-              backgroundColor: 'var(--card-bg, #1e293b)',
+              backgroundColor: 'var(--card-bg)',
               borderRadius: '16px',
               padding: '2rem',
               width: '100%',
@@ -426,7 +426,7 @@ const Schedules: React.FC = () => {
                     padding: '0.65rem 0.85rem',
                     borderRadius: '8px',
                     border: '1px solid var(--border-color)',
-                    background: 'var(--input-bg, #0f172a)',
+                    background: 'var(--input-bg)',
                     color: 'var(--text-main, #f8fafc)',
                     fontSize: '0.95rem',
                   }}
@@ -457,7 +457,7 @@ const Schedules: React.FC = () => {
                       padding: '0.65rem 0.85rem',
                       borderRadius: '8px',
                       border: '1px solid var(--border-color)',
-                      background: 'var(--input-bg, #0f172a)',
+                      background: 'var(--input-bg)',
                       color: 'var(--text-main, #f8fafc)',
                       fontSize: '0.95rem',
                     }}
@@ -477,7 +477,7 @@ const Schedules: React.FC = () => {
                       padding: '0.65rem 0.85rem',
                       borderRadius: '8px',
                       border: '1px solid var(--border-color)',
-                      background: 'var(--input-bg, #0f172a)',
+                      background: 'var(--input-bg)',
                       color: 'var(--text-main, #f8fafc)',
                       fontSize: '0.95rem',
                     }}
@@ -528,7 +528,7 @@ const Schedules: React.FC = () => {
                     padding: '0.75rem',
                     borderRadius: '8px',
                     border: '1px solid var(--border-color)',
-                    background: 'var(--input-bg, #0f172a)',
+                    background: 'var(--input-bg)',
                   }}
                 >
                   {AVAILABLE_ACTIVITIES.map((act) => {
