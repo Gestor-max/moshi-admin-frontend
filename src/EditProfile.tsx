@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { api } from './api';
 import { useLanguage } from './LanguageContext';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { UserCheck, Save, ArrowLeft, Briefcase, GraduationCap, MapPin, Key, User, Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import { UserCheck, Save, ArrowLeft, Briefcase, GraduationCap, MapPin, Key, User, Eye, EyeOff, ShieldCheck, Wand2, Sparkles } from 'lucide-react';
+import { generateSecurePassword, generateRecoveryEmail, generateRandomRecoveryEmail, DEFAULT_RECOVERY_DOMAIN } from './profileGenerators';
 
 interface ProxyItem {
   id: number;
@@ -41,6 +42,22 @@ const EditProfile: React.FC = () => {
 
   const togglePasswordVisibility = (field: string) => {
     setShowPasswords((prev) => ({ ...prev, [field]: !prev[field] }));
+  };
+
+  const handleGenerateNewPassword = () => {
+    const newPass = generateSecurePassword(14);
+    setFormData((prev) => ({ ...prev, gmail_new_password: newPass }));
+    setShowPasswords((prev) => ({ ...prev, gmail_new_password: true }));
+  };
+
+  const handleGenerateNewRecoveryEmailRandom = () => {
+    const newEmail = generateRandomRecoveryEmail();
+    setFormData((prev) => ({ ...prev, gmail_new_recovery_email: newEmail }));
+  };
+
+  const handleGenerateNewRecoveryEmailFromName = () => {
+    const newEmail = generateRecoveryEmail(formData.name, formData.lastname);
+    setFormData((prev) => ({ ...prev, gmail_new_recovery_email: newEmail }));
   };
 
   // Basic Profile fields
@@ -653,7 +670,29 @@ const EditProfile: React.FC = () => {
               </div>
 
               <div className="form-group">
-                <label>Nueva Contraseña de Gmail</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <label style={{ margin: 0, fontWeight: 600 }}>Nueva Contraseña de Gmail</label>
+                  <button
+                    type="button"
+                    onClick={handleGenerateNewPassword}
+                    className="btn-secondary"
+                    style={{
+                      padding: '0.25rem 0.65rem',
+                      fontSize: '0.75rem',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: 'var(--bg-card)'
+                    }}
+                    title="Generar contraseña segura aleatoria para Google"
+                  >
+                    <Wand2 size={13} style={{ color: 'var(--primary)' }} />
+                    <span>Generar Password</span>
+                  </button>
+                </div>
                 <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                   <input
                     type={showPasswords.gmail_new_password ? 'text' : 'password'}
@@ -686,15 +725,64 @@ const EditProfile: React.FC = () => {
               </div>
 
               <div className="form-group">
-                <label>Nuevo Correo de Recuperación</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem', flexWrap: 'wrap', gap: '0.4rem' }}>
+                  <label style={{ margin: 0, fontWeight: 600 }}>Nuevo Correo de Recuperación</label>
+                  <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                    {Boolean(formData.name || formData.lastname) && (
+                      <button
+                        type="button"
+                        onClick={handleGenerateNewRecoveryEmailFromName}
+                        className="btn-secondary"
+                        style={{
+                          padding: '0.25rem 0.6rem',
+                          fontSize: '0.75rem',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.35rem',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          border: '1px solid var(--border-color)',
+                          backgroundColor: 'var(--bg-card)'
+                        }}
+                        title={`Generar usando "${formData.name || ''} ${formData.lastname || ''}" + 00..99 + ${DEFAULT_RECOVERY_DOMAIN}`}
+                      >
+                        <Sparkles size={12} style={{ color: 'var(--primary)' }} />
+                        <span>Con Nombre Perfil</span>
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleGenerateNewRecoveryEmailRandom}
+                      className="btn-secondary"
+                      style={{
+                        padding: '0.25rem 0.65rem',
+                        fontSize: '0.75rem',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.35rem',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        border: '1px solid var(--border-color)',
+                        backgroundColor: 'var(--bg-card)'
+                      }}
+                      title={`Generar correo aleatorio (nombres + apellidos + 00..99 + ${DEFAULT_RECOVERY_DOMAIN})`}
+                    >
+                      <Sparkles size={13} style={{ color: 'var(--primary)' }} />
+                      <span>Generar Correo ({DEFAULT_RECOVERY_DOMAIN})</span>
+                    </button>
+                  </div>
+                </div>
                 <input
                   type="email"
                   className="input-field"
                   name="gmail_new_recovery_email"
                   value={formData.gmail_new_recovery_email}
                   onChange={handleChange}
-                  placeholder="nuevo_recuperacion@gmail.com"
+                  placeholder={`ej: juanperez42${DEFAULT_RECOVERY_DOMAIN}`}
                 />
+                <small style={{ display: 'block', color: 'var(--text-muted)', marginTop: '0.25rem', fontSize: '0.75rem' }}>
+                  Formato: nombre + apellido + 00..99 + {DEFAULT_RECOVERY_DOMAIN} (nombres y dominio modificables en <code>src/profileGenerators.ts</code>)
+                </small>
               </div>
             </div>
           )}
