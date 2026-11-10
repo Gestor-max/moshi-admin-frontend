@@ -82,6 +82,7 @@ interface ProfileItem {
   location_proxy_id?: number | null;
   location_proxy_alt_id?: number | null;
   tag_id?: number | null;
+  status?: number;
   is_zombie?: number;
   empleo?: string;
   educacion?: string;
@@ -101,6 +102,40 @@ interface ProfileItem {
   profile_websites?: ProfileWebsiteAccount[];
   _count?: ActivityCount;
 }
+
+const getStatusBadge = (status?: number) => {
+  switch (Number(status)) {
+    case 1:
+      return {
+        label: '1 - Nuevo',
+        bg: 'rgba(14, 165, 233, 0.15)',
+        color: '#0284c7',
+        border: 'rgba(14, 165, 233, 0.35)',
+      };
+    case 2:
+      return {
+        label: '2 - En Prep.',
+        bg: 'rgba(245, 158, 11, 0.15)',
+        color: '#d97706',
+        border: 'rgba(245, 158, 11, 0.35)',
+      };
+    case 3:
+      return {
+        label: '3 - Listo',
+        bg: 'rgba(16, 185, 129, 0.15)',
+        color: '#059669',
+        border: 'rgba(16, 185, 129, 0.35)',
+      };
+    case 4:
+    default:
+      return {
+        label: '4 - Trabajando',
+        bg: 'rgba(139, 92, 246, 0.15)',
+        color: '#7c3aed',
+        border: 'rgba(139, 92, 246, 0.35)',
+      };
+  }
+};
 
 const Profiles: React.FC = () => {
   const { t } = useLanguage();
@@ -308,6 +343,7 @@ const Profiles: React.FC = () => {
               <tr style={{ background: 'var(--surface-hover)', borderBottom: '1px solid var(--border)' }}>
                 <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>ID</th>
                 <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Nombre Completo</th>
+                <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Status</th>
                 <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Etiqueta</th>
                 <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Gmail</th>
                 <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Proxy</th>
@@ -329,6 +365,30 @@ const Profiles: React.FC = () => {
                       <div style={{ fontWeight: 600, color: 'var(--text)' }}>
                         {p.name} {p.lastname}
                       </div>
+                    </td>
+                    <td style={{ padding: '1rem' }}>
+                      {(() => {
+                        const s = getStatusBadge(p.status);
+                        return (
+                          <span
+                            className="badge"
+                            style={{
+                              background: s.bg,
+                              color: s.color,
+                              border: `1px solid ${s.border}`,
+                              fontWeight: 700,
+                              fontSize: '0.78rem',
+                              padding: '0.2rem 0.55rem',
+                              borderRadius: '9999px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {s.label}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td style={{ padding: '1rem' }}>
                       {p.tag ? (

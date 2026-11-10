@@ -100,6 +100,7 @@ const EditProfile: React.FC = () => {
     gmail_new_password: '',
     gmail_new_recovery_email: '',
     gmail_change_2fa: false,
+    status: 1,
   });
 
   // Empleo fields
@@ -179,6 +180,7 @@ const EditProfile: React.FC = () => {
             gmail_new_password: prof.gmail_new_password || '',
             gmail_new_recovery_email: prof.gmail_new_recovery_email || '',
             gmail_change_2fa: Boolean(prof.gmail_change_2fa),
+            status: prof.status !== undefined && prof.status !== null ? Number(prof.status) : 1,
           });
 
           try {
@@ -235,6 +237,7 @@ const EditProfile: React.FC = () => {
           mes_nac: Number(formData.mes_nac) || 1,
           year_nac: Number(formData.year_nac) || 2000,
           day_nac: Number(formData.day_nac) || 1,
+          status: Number(formData.status) || 1,
           proxy_id: formData.proxy_id ? Number(formData.proxy_id) : null,
           proxy2_id: formData.proxy2_id ? Number(formData.proxy2_id) : null,
           gmail_change_2fa: Boolean(formData.gmail_change_2fa),
@@ -502,6 +505,27 @@ const EditProfile: React.FC = () => {
               <div className="form-group" style={{ gridColumn: 'span 2' }}>
                 <label>Biografía (Bio Simple)</label>
                 <textarea name="bio" rows={2} className="input-field" value={formData.bio} onChange={handleChange} placeholder="Acerca de este perfil..." />
+              </div>
+
+              <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600 }}>
+                  <span>🚦 Estado del Perfil (Status)</span>
+                </label>
+                <select
+                  name="status"
+                  className="input-field"
+                  value={formData.status}
+                  onChange={handleChange}
+                  style={{ fontWeight: 600 }}
+                >
+                  <option value={1}>1 - Nuevo</option>
+                  <option value={2}>2 - En Preparación</option>
+                  <option value={3}>3 - Listo</option>
+                  <option value={4}>4 - Trabajando</option>
+                </select>
+                <small style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '0.25rem', display: 'block' }}>
+                  Estado operativo: 1=Nuevo, 2=En Preparación, 3=Listo, 4=Trabajando.
+                </small>
               </div>
             </div>
           )}
