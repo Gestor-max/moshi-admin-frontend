@@ -30,6 +30,13 @@ interface TagItem {
   color?: string;
 }
 
+interface LoteItem {
+  id: number;
+  name: string;
+  fecha_compra?: string;
+  proveedor?: string;
+}
+
 interface ProfileWebsiteAccount {
   id: number;
   website_id: number;
@@ -82,6 +89,7 @@ interface ProfileItem {
   location_proxy_id?: number | null;
   location_proxy_alt_id?: number | null;
   tag_id?: number | null;
+  lote_id?: number | null;
   status?: number;
   is_zombie?: number;
   empleo?: string;
@@ -99,6 +107,7 @@ interface ProfileItem {
   location_proxy?: LocationItem;
   location_proxy_alt?: LocationItem;
   tag?: TagItem;
+  lote?: LoteItem;
   profile_websites?: ProfileWebsiteAccount[];
   _count?: ActivityCount;
 }
@@ -107,21 +116,21 @@ const getStatusBadge = (status?: number) => {
   switch (Number(status)) {
     case 1:
       return {
-        label: '1 - Nuevo',
+        label: 'Nuevo',
         bg: 'rgba(14, 165, 233, 0.15)',
         color: '#0284c7',
         border: 'rgba(14, 165, 233, 0.35)',
       };
     case 2:
       return {
-        label: '2 - En Prep.',
+        label: 'En Prep.',
         bg: 'rgba(245, 158, 11, 0.15)',
         color: '#d97706',
         border: 'rgba(245, 158, 11, 0.35)',
       };
     case 3:
       return {
-        label: '3 - Listo',
+        label: 'Listo',
         bg: 'rgba(16, 185, 129, 0.15)',
         color: '#059669',
         border: 'rgba(16, 185, 129, 0.35)',
@@ -129,7 +138,7 @@ const getStatusBadge = (status?: number) => {
     case 4:
     default:
       return {
-        label: '4 - Trabajando',
+        label: 'Trabajando',
         bg: 'rgba(139, 92, 246, 0.15)',
         color: '#7c3aed',
         border: 'rgba(139, 92, 246, 0.35)',

@@ -7,9 +7,11 @@ import Login from './Login';
 import Register from './Register';
 import Dashboard from './Dashboard';
 import Profiles from './Profiles';
+import ProfilesBoard from './ProfilesBoard';
 import ArchivedProfiles from './ArchivedProfiles';
 import ZombieProfiles from './ZombieProfiles';
 import Tags from './Tags';
+import Lotes from './Lotes';
 import BulkOperations from './BulkOperations';
 import NewProfile from './NewProfile';
 import EditProfile from './EditProfile';
@@ -60,9 +62,11 @@ function App() {
             {/* Rutas Privadas del Panel */}
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/profiles" element={<ProtectedRoute><Profiles /></ProtectedRoute>} />
+            <Route path="/profiles/board" element={<ProtectedRoute><ProfilesBoard /></ProtectedRoute>} />
             <Route path="/profiles/archived" element={<ProtectedRoute><ArchivedProfiles /></ProtectedRoute>} />
             <Route path="/profiles/zombie" element={<ProtectedRoute><ZombieProfiles /></ProtectedRoute>} />
             <Route path="/tags" element={<ProtectedRoute><Tags /></ProtectedRoute>} />
+            <Route path="/lotes" element={<ProtectedRoute><Lotes /></ProtectedRoute>} />
             <Route path="/bulk-operations" element={<ProtectedRoute><BulkOperations /></ProtectedRoute>} />
             <Route path="/profiles/new" element={<ProtectedRoute><NewProfile /></ProtectedRoute>} />
             <Route path="/profiles/:profileId/edit" element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />

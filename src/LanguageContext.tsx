@@ -7,9 +7,11 @@ export const translations = {
     // Navigation / Header
     nav_dashboard: "Panel Principal",
     nav_profiles: "Perfiles",
+    nav_profiles_board: "Tablero Perfiles",
     nav_archived_profiles: "Perfiles Archivados",
     nav_zombie_profiles: "Cuentas Zombie",
     nav_tags: "Etiquetas / Tags",
+    nav_lotes: "Lotes",
     nav_proxies: "Proxies",
     nav_locations: "Ubicaciones",
     nav_schedules: "Agenda",
@@ -160,9 +162,11 @@ export const translations = {
     // Navigation / Header
     nav_dashboard: "Dashboard",
     nav_profiles: "Profiles",
+    nav_profiles_board: "Profiles Board",
     nav_archived_profiles: "Archived Profiles",
     nav_zombie_profiles: "Zombie Accounts",
     nav_tags: "Tags",
+    nav_lotes: "Batches / Lotes",
     nav_proxies: "Proxies",
     nav_locations: "Locations",
     nav_schedules: "Schedule",

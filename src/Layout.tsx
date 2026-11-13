@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { useLanguage } from './LanguageContext';
-import { Home, UserCheck, Server, User, LogOut, Bot, Globe, Users, Menu, X, Link as LinkIcon, PlayCircle, Languages, MapPin, Archive, Tag, Layers, Calendar, Skull } from 'lucide-react';
+import { Home, UserCheck, Server, User, LogOut, Bot, Globe, Users, Menu, X, Link as LinkIcon, PlayCircle, Languages, MapPin, Archive, Tag, Layers, Calendar, Skull, LayoutGrid, Boxes } from 'lucide-react';
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { logout, isAdmin } = useAuth();
@@ -90,8 +90,11 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           <NavLink to="/dashboard" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={closeSidebar} end>
             <Home size={18} /> {t('nav_dashboard')}
           </NavLink>
-          <NavLink to="/profiles" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={closeSidebar}>
+          <NavLink to="/profiles" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={closeSidebar} end>
             <UserCheck size={18} /> {t('nav_profiles')}
+          </NavLink>
+          <NavLink to="/profiles/board" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={closeSidebar}>
+            <LayoutGrid size={18} /> {t('nav_profiles_board') || 'Tablero Perfiles'}
           </NavLink>
           <NavLink to="/profiles/archived" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={closeSidebar}>
             <Archive size={18} /> {t('nav_archived_profiles')}
@@ -101,6 +104,9 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           </NavLink>
           <NavLink to="/tags" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={closeSidebar}>
             <Tag size={18} /> {t('nav_tags')}
+          </NavLink>
+          <NavLink to="/lotes" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={closeSidebar}>
+            <Boxes size={18} /> {t('nav_lotes') || 'Lotes'}
           </NavLink>
           <NavLink to="/proxies" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={closeSidebar}>
             <Server size={18} /> {t('nav_proxies')}

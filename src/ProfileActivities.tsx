@@ -9,6 +9,12 @@ interface ProfileItem {
   lastname: string;
   gmail?: string;
   profile_email?: string;
+  location_id?: number | null;
+  location?: {
+    id: number;
+    location: string;
+    state: string;
+  } | null;
 }
 
 export interface ActivityLogItem {
@@ -48,6 +54,24 @@ const ProfileActivities: React.FC = () => {
   const [logsLoading, setLogsLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [syncingLocation, setSyncingLocation] = useState(false);
+
+  const handleSyncFromLocation = async () => {
+    if (!profileId) return;
+    setSyncingLocation(true);
+    try {
+      const res = await api.post(`/profiles/${profileId}/sync-location-activities`);
+      const counts = res.data?.counts || {};
+      const total = counts.total || 0;
+      alert(`✅ ¡Éxito! Se cargaron ${total} actividades de la ubicación al perfil (Google: ${counts.google || 0}, YouTube: ${counts.youtube || 0}, Maps: ${counts.gmaps || 0}, Browser: ${counts.browser || 0}, Quora: ${counts.quora || 0}, Medium: ${counts.medium || 0}).`);
+      await fetchProfileAndActivities();
+    } catch (err: any) {
+      console.error(err);
+      alert(err.response?.data?.message || 'Error al cargar actividades de la ubicación.');
+    } finally {
+      setSyncingLocation(false);
+    }
+  };
 
   // Form State
   const [formValues, setFormValues] = useState<any>({});
@@ -289,9 +313,30 @@ const ProfileActivities: React.FC = () => {
               </p>
             </div>
           </div>
-          <button className="btn btn-secondary" onClick={handleExportJson}>
-            <Download size={18} /> Exportar JSON
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+            {profile?.location_id && (
+              <button
+                className="btn btn-secondary"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  background: 'rgba(59, 130, 246, 0.12)',
+                  color: '#3b82f6',
+                  border: '1px solid rgba(59, 130, 246, 0.3)',
+                  fontWeight: 600
+                }}
+                onClick={handleSyncFromLocation}
+                disabled={syncingLocation}
+              >
+                <RefreshCw size={16} className={syncingLocation ? 'spin' : ''} />
+                {syncingLocation ? 'Cargando...' : `⚡ Cargar Actividades de Location (${profile.location?.location || 'Ubicación'})`}
+              </button>
+            )}
+            <button className="btn btn-secondary" onClick={handleExportJson}>
+              <Download size={18} /> Exportar JSON
+            </button>
+          </div>
         </div>
 
         {/* TABS DE PLATAFORMA PRINCIPAL */}

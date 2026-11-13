@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from './api';
 import { useLanguage } from './LanguageContext';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { UserCheck, Save, ArrowLeft, Briefcase, GraduationCap, MapPin, Key, User, Eye, EyeOff, ShieldCheck, Wand2, Sparkles } from 'lucide-react';
+import { UserCheck, Save, ArrowLeft, Briefcase, GraduationCap, MapPin, Key, User, Eye, EyeOff, ShieldCheck, Wand2, Sparkles , RefreshCw } from 'lucide-react';
 import { generateSecurePassword, generateRecoveryEmail, generateRandomRecoveryEmail, DEFAULT_RECOVERY_DOMAIN } from './profileGenerators';
 
 interface ProxyItem {
@@ -24,6 +24,12 @@ interface TagItem {
   color?: string;
 }
 
+interface LoteItem {
+  id: number;
+  name: string;
+  proveedor?: string;
+}
+
 type TabType = 'basica' | 'credenciales' | 'empleo' | 'educacion' | 'ubicacion';
 
 const EditProfile: React.FC = () => {
@@ -34,6 +40,7 @@ const EditProfile: React.FC = () => {
   const [proxies, setProxies] = useState<ProxyItem[]>([]);
   const [locations, setLocations] = useState<LocationItem[]>([]);
   const [tags, setTags] = useState<TagItem[]>([]);
+  const [lotes, setLotes] = useState<LoteItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -61,6 +68,39 @@ const EditProfile: React.FC = () => {
   };
 
   // Basic Profile fields
+    const [syncingLocationActivities, setSyncingLocationActivities] = useState(false);
+  const [syncLocationSuccess, setSyncLocationSuccess] = useState('');
+  const [syncLocationError, setSyncLocationError] = useState('');
+
+  const handleSyncLocationActivities = async () => {
+    if (!formData.location_id) {
+      alert('Selecciona primero una Ubicación Asociada.');
+      return;
+    }
+    setSyncingLocationActivities(true);
+    setSyncLocationSuccess('');
+    setSyncLocationError('');
+    try {
+      // 1. Guardar primero el location_id en el perfil
+      await api.patch(`/profiles/${profileId}`, {
+        location_id: Number(formData.location_id),
+      });
+
+      // 2. Ejecutar la sincronización desde el backend
+      const res = await api.post(`/profiles/${profileId}/sync-location-activities`);
+      const counts = res.data?.counts || {};
+      const total = counts.total || 0;
+      setSyncLocationSuccess(
+        `✅ ¡Éxito! Se cargaron ${total} actividades de la ubicación al perfil (Google: ${counts.google || 0}, YouTube: ${counts.youtube || 0}, Maps: ${counts.gmaps || 0}, Browser: ${counts.browser || 0}, Quora: ${counts.quora || 0}, Medium: ${counts.medium || 0}).`
+      );
+    } catch (err: any) {
+      console.error(err);
+      setSyncLocationError(err.response?.data?.message || 'Error al cargar actividades de la ubicación.');
+    } finally {
+      setSyncingLocationActivities(false);
+    }
+  };
+
   const [formData, setFormData] = useState({
     name: '',
     lastname: '',
@@ -94,6 +134,7 @@ const EditProfile: React.FC = () => {
     location_proxy_id: '',
     location_proxy_alt_id: '',
     tag_id: '',
+    lote_id: '',
     two_fa: '',
     two_fa_prev: '',
     telefono: '',
@@ -132,12 +173,18 @@ const EditProfile: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [resProfile, resProxies, resLocs, resTags] = await Promise.all([
+        const [resProfile, resProxies, resLocs, resTags, resLotes] = await Promise.all([
           api.get(`/profiles/${profileId}`),
           api.get('/proxies'),
           api.get('/locations'),
           api.get('/tags'),
+          api.get('/lotes'),
         ]);
+
+        setProxies(resProxies.data);
+        setLocations(resLocs.data);
+        setTags(resTags.data);
+        setLotes(resLotes.data);
 
         const prof = resProfile.data;
         if (prof) {
@@ -174,6 +221,7 @@ const EditProfile: React.FC = () => {
             location_proxy_id: prof.location_proxy_id ? String(prof.location_proxy_id) : '',
             location_proxy_alt_id: prof.location_proxy_alt_id ? String(prof.location_proxy_alt_id) : '',
             tag_id: prof.tag_id ? String(prof.tag_id) : '',
+            lote_id: prof.lote_id ? String(prof.lote_id) : '',
             two_fa: prof.two_fa || '',
             two_fa_prev: prof.two_fa_prev || '',
             telefono: prof.telefono || '',
@@ -245,6 +293,7 @@ const EditProfile: React.FC = () => {
           location_proxy_id: formData.location_proxy_id ? Number(formData.location_proxy_id) : null,
           location_proxy_alt_id: formData.location_proxy_alt_id ? Number(formData.location_proxy_alt_id) : null,
           tag_id: formData.tag_id ? Number(formData.tag_id) : null,
+          lote_id: formData.lote_id ? Number(formData.lote_id) : null,
           empleo: JSON.stringify(empleo),
           educacion: JSON.stringify(educacion),
           ubicacion: JSON.stringify(ubicacion),
@@ -464,6 +513,66 @@ const EditProfile: React.FC = () => {
                     </option>
                   ))}
                 </select>
+                {formData.location_id && (
+                  <div style={{ marginTop: '0.6rem' }}>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      style={{
+                        width: '100%',
+                        fontSize: '0.82rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.45rem',
+                        padding: '0.45rem 0.75rem',
+                        background: 'rgba(59, 130, 246, 0.12)',
+                        color: '#3b82f6',
+                        border: '1px solid rgba(59, 130, 246, 0.3)',
+                        fontWeight: 600,
+                      }}
+                      onClick={handleSyncLocationActivities}
+                      disabled={syncingLocationActivities}
+                    >
+                      <RefreshCw size={14} className={syncingLocationActivities ? 'spin' : ''} />
+                      {syncingLocationActivities
+                        ? 'Cargando actividades de la ubicación...'
+                        : '⚡ Cargar Actividades de esta Ubicación al Perfil'}
+                    </button>
+                    {syncLocationSuccess && (
+                      <div
+                        style={{
+                          marginTop: '0.5rem',
+                          padding: '0.5rem 0.75rem',
+                          borderRadius: '6px',
+                          background: 'rgba(16, 185, 129, 0.15)',
+                          color: '#10b981',
+                          fontSize: '0.8rem',
+                          border: '1px solid rgba(16, 185, 129, 0.3)',
+                          lineHeight: 1.4,
+                        }}
+                      >
+                        {syncLocationSuccess}
+                      </div>
+                    )}
+                    {syncLocationError && (
+                      <div
+                        style={{
+                          marginTop: '0.5rem',
+                          padding: '0.5rem 0.75rem',
+                          borderRadius: '6px',
+                          background: 'rgba(239, 68, 68, 0.15)',
+                          color: '#ef4444',
+                          fontSize: '0.8rem',
+                          border: '1px solid rgba(239, 68, 68, 0.3)',
+                          lineHeight: 1.4,
+                        }}
+                      >
+                        {syncLocationError}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="form-group">
@@ -502,6 +611,18 @@ const EditProfile: React.FC = () => {
                 </select>
               </div>
 
+              <div className="form-group">
+                <label>📦 Lote de Perfiles (Opcional)</label>
+                <select name="lote_id" className="input-field" value={formData.lote_id} onChange={handleChange}>
+                  <option value="">-- Sin Lote --</option>
+                  {lotes.map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.name} {l.proveedor ? `(${l.proveedor})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div className="form-group" style={{ gridColumn: 'span 2' }}>
                 <label>Biografía (Bio Simple)</label>
                 <textarea name="bio" rows={2} className="input-field" value={formData.bio} onChange={handleChange} placeholder="Acerca de este perfil..." />
@@ -518,10 +639,10 @@ const EditProfile: React.FC = () => {
                   onChange={handleChange}
                   style={{ fontWeight: 600 }}
                 >
-                  <option value={1}>1 - Nuevo</option>
-                  <option value={2}>2 - En Preparación</option>
-                  <option value={3}>3 - Listo</option>
-                  <option value={4}>4 - Trabajando</option>
+                  <option value={1}>Nuevo</option>
+                  <option value={2}>En Preparación</option>
+                  <option value={3}>Listo</option>
+                  <option value={4}>Trabajando</option>
                 </select>
                 <small style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '0.25rem', display: 'block' }}>
                   Estado operativo: 1=Nuevo, 2=En Preparación, 3=Listo, 4=Trabajando.

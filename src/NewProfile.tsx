@@ -24,6 +24,12 @@ interface TagItem {
   color?: string;
 }
 
+interface LoteItem {
+  id: number;
+  name: string;
+  proveedor?: string;
+}
+
 type TabType = 'basica' | 'credenciales' | 'empleo' | 'educacion' | 'ubicacion';
 
 const NewProfile: React.FC = () => {
@@ -33,6 +39,7 @@ const NewProfile: React.FC = () => {
   const [proxies, setProxies] = useState<ProxyItem[]>([]);
   const [locations, setLocations] = useState<LocationItem[]>([]);
   const [tags, setTags] = useState<TagItem[]>([]);
+  const [lotes, setLotes] = useState<LoteItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<TabType>('basica');
@@ -92,6 +99,7 @@ const NewProfile: React.FC = () => {
     location_proxy_id: '',
     location_proxy_alt_id: '',
     tag_id: '',
+    lote_id: '',
     two_fa: '',
     two_fa_prev: '',
     telefono: '',
@@ -130,14 +138,16 @@ const NewProfile: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [resProxies, resLocs, resTags] = await Promise.all([
+        const [resProxies, resLocs, resTags, resLotes] = await Promise.all([
           api.get('/proxies'),
           api.get('/locations'),
           api.get('/tags'),
+          api.get('/lotes'),
         ]);
         setProxies(resProxies.data);
         setLocations(resLocs.data);
         setTags(resTags.data);
+        setLotes(resLotes.data);
       } catch (err) {
         console.error(err);
       }
@@ -182,6 +192,7 @@ const NewProfile: React.FC = () => {
           location_proxy_id: formData.location_proxy_id ? Number(formData.location_proxy_id) : null,
           location_proxy_alt_id: formData.location_proxy_alt_id ? Number(formData.location_proxy_alt_id) : null,
           tag_id: formData.tag_id ? Number(formData.tag_id) : null,
+          lote_id: formData.lote_id ? Number(formData.lote_id) : null,
           empleo: JSON.stringify(empleo),
           educacion: JSON.stringify(educacion),
           ubicacion: JSON.stringify(ubicacion),
@@ -436,6 +447,18 @@ const NewProfile: React.FC = () => {
                 </select>
               </div>
 
+              <div className="form-group">
+                <label>📦 Lote de Perfiles (Opcional)</label>
+                <select name="lote_id" className="input-field" value={formData.lote_id} onChange={handleChange}>
+                  <option value="">-- Sin Lote --</option>
+                  {lotes.map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.name} {l.proveedor ? `(${l.proveedor})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div className="form-group" style={{ gridColumn: 'span 2' }}>
                 <label>Biografía (Bio Simple)</label>
                 <textarea name="bio" rows={2} className="input-field" value={formData.bio} onChange={handleChange} placeholder="Acerca de este perfil..." />
@@ -452,10 +475,10 @@ const NewProfile: React.FC = () => {
                   onChange={handleChange}
                   style={{ fontWeight: 600 }}
                 >
-                  <option value={1}>1 - Nuevo (Por defecto)</option>
-                  <option value={2}>2 - En Preparación</option>
-                  <option value={3}>3 - Listo</option>
-                  <option value={4}>4 - Trabajando</option>
+                  <option value={1}>Nuevo (Por defecto)</option>
+                  <option value={2}>En Preparación</option>
+                  <option value={3}>Listo</option>
+                  <option value={4}>Trabajando</option>
                 </select>
                 <small style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '0.25rem', display: 'block' }}>
                   Estado operativo: 1=Nuevo, 2=En Preparación, 3=Listo, 4=Trabajando.
