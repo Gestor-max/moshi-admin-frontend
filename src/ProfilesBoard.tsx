@@ -45,6 +45,12 @@ interface LocationItem {
   location: string;
 }
 
+interface ProfileTagItem {
+  profile_id: number;
+  tag_id: number;
+  tag: TagItem;
+}
+
 interface ProfileItem {
   id: number;
   name: string;
@@ -61,6 +67,7 @@ interface ProfileItem {
   lote?: LoteItem;
   proxy?: ProxyItem;
   location?: LocationItem;
+  profile_tags?: ProfileTagItem[];
   _count?: {
     google_activities?: number;
     youtube_activities?: number;
@@ -116,6 +123,18 @@ const PRESET_COLORS = [
   '#64748b', // Slate
 ];
 
+const getProfileTags = (p: ProfileItem, allTags: TagItem[]): TagItem[] => {
+  if (p.profile_tags && p.profile_tags.length > 0) {
+    return p.profile_tags.map((pt) => pt.tag).filter(Boolean);
+  }
+  if (p.tag) return [p.tag];
+  if (p.tag_id) {
+    const found = allTags.find((t) => t.id === p.tag_id);
+    if (found) return [found];
+  }
+  return [];
+};
+
 const ProfilesBoard: React.FC = () => {
   const navigate = useNavigate();
   const [profiles, setProfiles] = useState<ProfileItem[]>([]);
@@ -131,7 +150,6 @@ const ProfilesBoard: React.FC = () => {
 
   // Inline feedback for tag updates
   const [updatingProfileId, setUpdatingProfileId] = useState<number | null>(null);
-  const [updatingLoteProfileId, setUpdatingLoteProfileId] = useState<number | null>(null);
   const [copiedEmail, setCopiedEmail] = useState<string | null>(null);
 
   // Dynamic Tag Creation Modal State
@@ -164,20 +182,28 @@ const ProfilesBoard: React.FC = () => {
     fetchData();
   }, []);
 
-  // Update profile tag directly from card
-  const handleTagChange = async (profileId: number, newTagIdStr: string) => {
-    const newTagId = newTagIdStr ? Number(newTagIdStr) : null;
+  // Assign a tag to profile (Many-to-Many)
+  const handleAddTagToProfile = async (profileId: number, tagId: number) => {
+    const tagObj = tags.find((t) => t.id === tagId);
+    if (!tagObj) return;
+
     setUpdatingProfileId(profileId);
 
     // Optimistic update
     setProfiles((prev) =>
       prev.map((p) => {
         if (p.id === profileId) {
-          const matchingTag = tags.find((t) => t.id === newTagId);
+          const current = getProfileTags(p, tags);
+          if (current.some((t) => t.id === tagId)) return p;
+          const newProfileTags: ProfileTagItem[] = [
+            ...(p.profile_tags || current.map((t) => ({ profile_id: profileId, tag_id: t.id, tag: t }))),
+            { profile_id: profileId, tag_id: tagId, tag: tagObj },
+          ];
           return {
             ...p,
-            tag_id: newTagId,
-            tag: matchingTag || undefined,
+            tag_id: tagId,
+            tag: tagObj,
+            profile_tags: newProfileTags,
           };
         }
         return p;
@@ -185,32 +211,35 @@ const ProfilesBoard: React.FC = () => {
     );
 
     try {
-      await api.patch(`/profiles/${profileId}`, { tag_id: newTagId });
+      await api.post(`/profiles/${profileId}/tags/${tagId}`);
     } catch (err) {
-      console.error('Error al actualizar etiqueta del perfil:', err);
-      // Revert upon error
+      console.error('Error al asociar etiqueta:', err);
       fetchData();
     } finally {
-      setTimeout(() => {
-        setUpdatingProfileId(null);
-      }, 700);
+      setTimeout(() => setUpdatingProfileId(null), 600);
     }
   };
 
-  // Update profile lote directly from card
-  const handleLoteChange = async (profileId: number, newLoteIdStr: string) => {
-    const newLoteId = newLoteIdStr ? Number(newLoteIdStr) : null;
-    setUpdatingLoteProfileId(profileId);
+  // Remove a tag from profile
+  const handleRemoveTagFromProfile = async (profileId: number, tagId: number) => {
+    setUpdatingProfileId(profileId);
 
     // Optimistic update
     setProfiles((prev) =>
       prev.map((p) => {
         if (p.id === profileId) {
-          const matchingLote = lotes.find((l) => l.id === newLoteId);
+          const current = getProfileTags(p, tags);
+          const filtered = current.filter((t) => t.id !== tagId);
+          const newProfileTags: ProfileTagItem[] = filtered.map((t) => ({
+            profile_id: profileId,
+            tag_id: t.id,
+            tag: t,
+          }));
           return {
             ...p,
-            lote_id: newLoteId,
-            lote: matchingLote || undefined,
+            tag_id: filtered[0]?.id || null,
+            tag: filtered[0] || undefined,
+            profile_tags: newProfileTags,
           };
         }
         return p;
@@ -218,14 +247,12 @@ const ProfilesBoard: React.FC = () => {
     );
 
     try {
-      await api.patch(`/profiles/${profileId}`, { lote_id: newLoteId });
+      await api.delete(`/profiles/${profileId}/tags/${tagId}`);
     } catch (err) {
-      console.error('Error al actualizar lote del perfil:', err);
+      console.error('Error al remover etiqueta:', err);
       fetchData();
     } finally {
-      setTimeout(() => {
-        setUpdatingLoteProfileId(null);
-      }, 700);
+      setTimeout(() => setUpdatingProfileId(null), 600);
     }
   };
 
@@ -264,7 +291,7 @@ const ProfilesBoard: React.FC = () => {
 
       // Si se invocó desde una card específica, asignar la nueva etiqueta directamente a ese perfil
       if (assignToProfileId) {
-        await handleTagChange(assignToProfileId, String(createdTag.id));
+        await handleAddTagToProfile(assignToProfileId, createdTag.id);
       }
 
       closeCreateTagModal();
@@ -296,11 +323,13 @@ const ProfilesBoard: React.FC = () => {
         if (!matchesSearch) return false;
       }
 
+      const pTags = getProfileTags(p, tags);
+
       // Tag filter
       if (selectedTagId === 'none') {
-        if (p.tag_id) return false;
+        if (pTags.length > 0) return false;
       } else if (selectedTagId !== 'all') {
-        if (p.tag_id !== selectedTagId) return false;
+        if (!pTags.some((t) => t.id === selectedTagId)) return false;
       }
 
       // Lote filter
@@ -315,22 +344,22 @@ const ProfilesBoard: React.FC = () => {
 
       return true;
     });
-  }, [profiles, search, selectedTagId, selectedLoteId, selectedStatus]);
+  }, [profiles, search, selectedTagId, selectedLoteId, selectedStatus, tags]);
 
   // Tag counts calculation
   const tagCounts = useMemo(() => {
     const counts: Record<number | string, number> = {
       all: profiles.length,
-      none: profiles.filter((p) => !p.tag_id).length,
+      none: profiles.filter((p) => getProfileTags(p, tags).length === 0).length,
     };
     tags.forEach((t) => {
-      counts[t.id] = profiles.filter((p) => p.tag_id === t.id).length;
+      counts[t.id] = profiles.filter((p) => getProfileTags(p, tags).some((pt) => pt.id === t.id)).length;
     });
     return counts;
   }, [profiles, tags]);
 
   return (
-    <div className="container" style={{ padding: '2rem 1.5rem', maxWidth: '1440px', margin: '0 auto' }}>
+    <div style={{ padding: '1.5rem 2rem', width: '100%', boxSizing: 'border-box' }}>
       {/* Header */}
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
@@ -342,7 +371,24 @@ const ProfilesBoard: React.FC = () => {
             Vista interactiva en tarjetas. Filtra y asigna etiquetas directamente a tus perfiles.
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => openCreateTagModal()}
+            className="btn-secondary"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.45rem',
+              padding: '0.6rem 1.15rem',
+              borderRadius: '0.5rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            <TagIcon size={17} style={{ color: 'var(--primary)' }} />
+            Nueva Etiqueta
+          </button>
           <button
             onClick={() => navigate('/profiles/new')}
             className="btn-primary"
@@ -630,6 +676,9 @@ const ProfilesBoard: React.FC = () => {
 
             const isUpdatingThis = updatingProfileId === p.id;
             const loteItem = p.lote || (p.lote_id ? lotes.find((l) => l.id === p.lote_id) : undefined);
+            const profileTags = getProfileTags(p, tags);
+            const profileTagIds = new Set(profileTags.map((t) => t.id));
+            const availableTagsForProfile = tags.filter((t) => !profileTagIds.has(t.id));
 
             return (
               <div
@@ -794,56 +843,6 @@ const ProfilesBoard: React.FC = () => {
                   )}
                 </div>
 
-                {/* Lote Block */}
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    padding: '0.5rem 0.65rem',
-                    borderRadius: '0.5rem',
-                    background: loteItem ? 'rgba(249, 115, 22, 0.08)' : 'rgba(0,0,0,0.02)',
-                    border: loteItem ? '1px solid rgba(249, 115, 22, 0.25)' : '1px solid var(--border-color)',
-                    marginBottom: '0.75rem',
-                  }}
-                >
-                  <Boxes size={16} style={{ color: loteItem ? 'var(--primary)' : 'var(--text-muted)', flexShrink: 0 }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
-                      <span style={{ fontSize: '0.7rem', fontWeight: 700, color: loteItem ? 'var(--primary)' : 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
-                        Lote {loteItem?.proveedor ? `(${loteItem.proveedor})` : ''}
-                      </span>
-                      {updatingLoteProfileId === p.id && (
-                        <span style={{ fontSize: '0.68rem', color: '#10b981', display: 'flex', alignItems: 'center', gap: '0.2rem', fontWeight: 600 }}>
-                          <CheckCircle2 size={11} /> Guardado
-                        </span>
-                      )}
-                    </div>
-                    <select
-                      className="input-field"
-                      value={p.lote_id || ''}
-                      onChange={(e) => handleLoteChange(p.id, e.target.value)}
-                      style={{
-                        padding: '0.25rem 0.45rem',
-                        fontSize: '0.82rem',
-                        borderRadius: '0.35rem',
-                        width: '100%',
-                        fontWeight: loteItem ? 600 : 400,
-                        color: loteItem ? 'var(--text-main)' : 'var(--text-muted)',
-                        borderColor: loteItem ? 'rgba(249, 115, 22, 0.35)' : 'var(--border-color)',
-                        background: 'var(--card-bg)',
-                      }}
-                    >
-                      <option value="">-- Sin Lote Asignado --</option>
-                      {lotes.map((l) => (
-                        <option key={l.id} value={l.id}>
-                          📦 {l.name} {l.proveedor ? `(${l.proveedor})` : ''}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
                 {/* Proxy & Location */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', marginBottom: '1rem', fontSize: '0.8rem' }}>
                   {/* Proxy */}
@@ -873,80 +872,254 @@ const ProfilesBoard: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Direct Interactive Tag Picker on Card */}
+                {/* Panel de Actividades por Plataforma */}
                 <div
                   style={{
-                    marginTop: 'auto',
-                    padding: '0.75rem',
+                    padding: '0.55rem 0.65rem',
                     borderRadius: '0.5rem',
-                    background: p.tag ? `${p.tag.color || '#3b82f6'}12` : 'rgba(0,0,0,0.03)',
-                    border: p.tag ? `1px solid ${p.tag.color || '#3b82f6'}33` : '1px solid var(--border-color)',
-                    marginBottom: '0.85rem',
-                    position: 'relative',
+                    background: 'rgba(0,0,0,0.02)',
+                    border: '1px solid var(--border-color)',
+                    marginBottom: '0.75rem',
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>
-                      <TagIcon size={12} style={{ color: p.tag?.color || 'var(--text-muted)' }} />
-                      <span>Etiqueta</span>
-                    </label>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                      ⚡ Actividades ({totalActivities})
+                    </span>
+                    {totalActivities === 0 && (
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>Sin tareas</span>
+                    )}
+                  </div>
+
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', alignItems: 'center' }}>
+                    <span
+                      className="badge"
+                      style={{
+                        background: '#3b82f615',
+                        color: '#3b82f6',
+                        border: '1px solid #3b82f630',
+                        fontSize: '0.73rem',
+                        padding: '0.15rem 0.45rem',
+                        borderRadius: '4px',
+                        fontWeight: 600,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.25rem',
+                      }}
+                      title="Búsquedas Google"
+                    >
+                      <span>🔍</span>
+                      <span>{p._count?.google_activities || 0}</span>
+                    </span>
+
+                    <span
+                      className="badge"
+                      style={{
+                        background: '#ef444415',
+                        color: '#ef4444',
+                        border: '1px solid #ef444430',
+                        fontSize: '0.73rem',
+                        padding: '0.15rem 0.45rem',
+                        borderRadius: '4px',
+                        fontWeight: 600,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.25rem',
+                      }}
+                      title="YouTube"
+                    >
+                      <span>🔴</span>
+                      <span>{p._count?.youtube_activities || 0}</span>
+                    </span>
+
+                    <span
+                      className="badge"
+                      style={{
+                        background: '#10b98115',
+                        color: '#10b981',
+                        border: '1px solid #10b98130',
+                        fontSize: '0.73rem',
+                        padding: '0.15rem 0.45rem',
+                        borderRadius: '4px',
+                        fontWeight: 600,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.25rem',
+                      }}
+                      title="Google Maps"
+                    >
+                      <span>🗺️</span>
+                      <span>{p._count?.gmaps_activities || 0}</span>
+                    </span>
+
+                    <span
+                      className="badge"
+                      style={{
+                        background: 'rgba(249, 115, 22, 0.12)',
+                        color: '#f97316',
+                        border: '1px solid rgba(249, 115, 22, 0.3)',
+                        fontSize: '0.73rem',
+                        padding: '0.15rem 0.45rem',
+                        borderRadius: '4px',
+                        fontWeight: 600,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.25rem',
+                      }}
+                      title="Sitios Web (Browser)"
+                    >
+                      <span>🌐</span>
+                      <span>{p._count?.browser_activities || 0}</span>
+                    </span>
+
+                    {(p._count?.quora_activities || 0) > 0 && (
+                      <span
+                        className="badge"
+                        style={{
+                          background: 'rgba(185, 43, 39, 0.12)',
+                          color: '#b92b27',
+                          border: '1px solid rgba(185, 43, 39, 0.3)',
+                          fontSize: '0.73rem',
+                          padding: '0.15rem 0.45rem',
+                          borderRadius: '4px',
+                          fontWeight: 600,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.25rem',
+                        }}
+                        title="Quora"
+                      >
+                        <span>❓</span>
+                        <span>{p._count?.quora_activities || 0}</span>
+                      </span>
+                    )}
+
+                    {(p._count?.medium_activities || 0) > 0 && (
+                      <span
+                        className="badge"
+                        style={{
+                          background: 'rgba(30, 41, 59, 0.12)',
+                          color: 'var(--text-main)',
+                          border: '1px solid var(--border-color)',
+                          fontSize: '0.73rem',
+                          padding: '0.15rem 0.45rem',
+                          borderRadius: '4px',
+                          fontWeight: 600,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.25rem',
+                        }}
+                        title="Medium"
+                      >
+                        <span>Ⓜ️</span>
+                        <span>{p._count?.medium_activities || 0}</span>
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Sección de Etiquetas INLINE */}
+                <div
+                  style={{
+                    marginTop: 'auto',
+                    marginBottom: '0.85rem',
+                    padding: '0.65rem 0.75rem',
+                    borderRadius: '0.5rem',
+                    background: 'rgba(0,0,0,0.02)',
+                    border: '1px solid var(--border-color)',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.45rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                      <TagIcon size={12} style={{ color: 'var(--primary)' }} />
+                      <span>Etiquetas ({profileTags.length})</span>
+                    </div>
                     {isUpdatingThis && (
-                      <span style={{ fontSize: '0.7rem', color: '#10b981', display: 'flex', alignItems: 'center', gap: '0.2rem', fontWeight: 600 }}>
-                        <CheckCircle2 size={12} /> Guardado
+                      <span style={{ fontSize: '0.68rem', color: '#10b981', display: 'flex', alignItems: 'center', gap: '0.2rem', fontWeight: 600 }}>
+                        <CheckCircle2 size={11} /> Guardado
                       </span>
                     )}
                   </div>
 
-                  <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
-                    <select
-                      className="input-field"
-                      value={p.tag_id || ''}
-                      onChange={(e) => {
-                        if (e.target.value === '__NEW__') {
-                          openCreateTagModal(p.id);
-                        } else {
-                          handleTagChange(p.id, e.target.value);
-                        }
-                      }}
-                      style={{
-                        padding: '0.35rem 0.6rem',
-                        fontSize: '0.82rem',
-                        borderRadius: '0.375rem',
-                        flex: 1,
-                        fontWeight: p.tag ? 600 : 400,
-                        color: p.tag ? (p.tag.color || 'var(--text-main)') : 'var(--text-muted)',
-                        borderColor: p.tag ? (p.tag.color || 'var(--border-color)') : 'var(--border-color)',
-                        background: 'var(--card-bg)',
-                      }}
-                    >
-                      <option value="">-- Sin Etiqueta --</option>
-                      {tags.map((t) => (
-                        <option key={t.id} value={t.id}>
-                          🏷️ {t.name}
-                        </option>
-                      ))}
-                      <option value="__NEW__">➕ Crear nueva etiqueta...</option>
-                    </select>
+                  {/* Tags list INLINE + Selector para agregar */}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', alignItems: 'center' }}>
+                    {profileTags.map((tag) => {
+                      const tagColor = tag.color || '#3b82f6';
+                      return (
+                        <span
+                          key={tag.id}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.3rem',
+                            padding: '0.2rem 0.55rem',
+                            borderRadius: '9999px',
+                            fontSize: '0.76rem',
+                            fontWeight: 600,
+                            background: `${tagColor}18`,
+                            color: tagColor,
+                            border: `1px solid ${tagColor}40`,
+                            lineHeight: 1.2,
+                          }}
+                        >
+                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: tagColor }} />
+                          <span>{tag.name}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveTagFromProfile(p.id, tag.id)}
+                            style={{
+                              background: 'transparent',
+                              border: 'none',
+                              cursor: 'pointer',
+                              color: tagColor,
+                              padding: 0,
+                              marginLeft: '0.15rem',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              opacity: 0.8,
+                            }}
+                            title={`Quitar etiqueta "${tag.name}"`}
+                          >
+                            <X size={12} />
+                          </button>
+                        </span>
+                      );
+                    })}
 
-                    <button
-                      type="button"
-                      onClick={() => openCreateTagModal(p.id)}
-                      style={{
-                        padding: '0.4rem 0.55rem',
-                        borderRadius: '0.375rem',
-                        border: '1px solid var(--border-color)',
-                        background: 'var(--card-bg)',
-                        color: 'var(--primary)',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexShrink: 0,
-                      }}
-                      title="Crear y asignar nueva etiqueta"
-                    >
-                      <Plus size={15} />
-                    </button>
+                    {/* Selector compacto para agregar etiquetas disponibles */}
+                    {availableTagsForProfile.length > 0 ? (
+                      <select
+                        value=""
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            handleAddTagToProfile(p.id, Number(e.target.value));
+                          }
+                        }}
+                        style={{
+                          padding: '0.18rem 0.5rem',
+                          fontSize: '0.75rem',
+                          borderRadius: '9999px',
+                          border: '1px dashed var(--border-color)',
+                          background: 'var(--card-bg)',
+                          color: 'var(--text-muted)',
+                          cursor: 'pointer',
+                          fontWeight: 600,
+                        }}
+                        title="Asignar otra etiqueta a este perfil"
+                      >
+                        <option value="">+ Etiqueta</option>
+                        {availableTagsForProfile.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            {t.name}
+                          </option>
+                        ))}
+                      </select>
+                    ) : profileTags.length === 0 ? (
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                        Sin etiquetas asignadas
+                      </span>
+                    ) : null}
                   </div>
                 </div>
 

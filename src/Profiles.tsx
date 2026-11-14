@@ -360,7 +360,6 @@ const Profiles: React.FC = () => {
                 <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>🛰️ Location Proxy</th>
                 <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>🔄 Location Proxy Alt</th>
                 <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>País</th>
-                <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>⚡ Actividades</th>
                 <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'right' }}>Acciones</th>
               </tr>
             </thead>
@@ -471,22 +470,6 @@ const Profiles: React.FC = () => {
                     </td>
                     <td style={{ padding: '1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                       {p.pais_iso || '-'}
-                    </td>
-                    <td style={{ padding: '1rem', fontSize: '0.82rem' }}>
-                      <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                        <span className="badge" style={{ background: '#3b82f615', color: '#3b82f6', border: '1px solid #3b82f630', fontSize: '0.75rem' }} title="Búsquedas Google">
-                          🔍 {p._count?.google_activities || 0}
-                        </span>
-                        <span className="badge" style={{ background: '#ef444415', color: '#ef4444', border: '1px solid #ef444430', fontSize: '0.75rem' }} title="YouTube">
-                          🔴 {p._count?.youtube_activities || 0}
-                        </span>
-                        <span className="badge" style={{ background: '#10b98115', color: '#10b981', border: '1px solid #10b98130', fontSize: '0.75rem' }} title="Google Maps">
-                          🗺️ {p._count?.gmaps_activities || 0}
-                        </span>
-                        <span className="badge" style={{ background: 'rgba(249, 115, 22, 0.12)', color: '#f97316', border: '1px solid rgba(249, 115, 22, 0.3)', fontSize: '0.75rem' }} title="Sitios Web (Browser)">
-                          🌐 {p._count?.browser_activities || 0}
-                        </span>
-                      </div>
                     </td>
                     <td style={{ padding: '1rem', textAlign: 'right' }}>
                       <div style={{ display: 'inline-flex', gap: '0.4rem', justifyContent: 'flex-end', flexWrap: 'wrap' }}>

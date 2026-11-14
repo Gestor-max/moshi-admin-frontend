@@ -13,6 +13,7 @@ import ZombieProfiles from './ZombieProfiles';
 import Tags from './Tags';
 import Lotes from './Lotes';
 import BulkOperations from './BulkOperations';
+import GmapsReviews from './GmapsReviews';
 import NewProfile from './NewProfile';
 import EditProfile from './EditProfile';
 import ProfileActivities from './ProfileActivities';
@@ -68,6 +69,7 @@ function App() {
             <Route path="/tags" element={<ProtectedRoute><Tags /></ProtectedRoute>} />
             <Route path="/lotes" element={<ProtectedRoute><Lotes /></ProtectedRoute>} />
             <Route path="/bulk-operations" element={<ProtectedRoute><BulkOperations /></ProtectedRoute>} />
+            <Route path="/gmaps-reviews" element={<ProtectedRoute><GmapsReviews /></ProtectedRoute>} />
             <Route path="/profiles/new" element={<ProtectedRoute><NewProfile /></ProtectedRoute>} />
             <Route path="/profiles/:profileId/edit" element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />
             <Route path="/profiles/:profileId/activities" element={<ProtectedRoute><ProfileActivities /></ProtectedRoute>} />

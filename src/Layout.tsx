@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { useLanguage } from './LanguageContext';
-import { Home, UserCheck, Server, User, LogOut, Bot, Globe, Users, Menu, X, Link as LinkIcon, PlayCircle, Languages, MapPin, Archive, Tag, Layers, Calendar, Skull, LayoutGrid, Boxes } from 'lucide-react';
+import { Home, UserCheck, Server, User, LogOut, Bot, Globe, Users, Menu, X, Link as LinkIcon, PlayCircle, Languages, MapPin, Archive, Tag, Layers, Calendar, Skull, LayoutGrid, Boxes, Star } from 'lucide-react';
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { logout, isAdmin } = useAuth();
@@ -119,6 +119,9 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           </NavLink>
           <NavLink to="/bulk-operations" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={closeSidebar}>
             <Layers size={18} /> {t('nav_bulk_operations')}
+          </NavLink>
+          <NavLink to="/gmaps-reviews" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={closeSidebar}>
+            <Star size={18} /> {t('nav_gmaps_reviews') || 'Reseñas Globales'}
           </NavLink>
           <NavLink to="/linked-profiles" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={closeSidebar}>
             <LinkIcon size={18} /> {t('nav_linked')}

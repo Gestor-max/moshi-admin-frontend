@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from './api';
-import { ArrowLeft, Download, Plus, Save, Trash2, Edit2, ListChecks, Search, Eye, ThumbsUp, MessageSquare, Globe, MapPin, Star, Navigation, RefreshCw, Camera } from 'lucide-react';
+import { ArrowLeft, Download, Plus, Save, Trash2, Edit2, ListChecks, Search, Eye, ThumbsUp, MessageSquare, Globe, MapPin, Star, Navigation, RefreshCw, Camera, ExternalLink } from 'lucide-react';
 
 interface ProfileItem {
   id: number;
@@ -27,7 +27,7 @@ export interface ActivityLogItem {
   created_at: string;
 }
 
-type PlatformType = 'youtube' | 'quora' | 'medium' | 'browser' | 'google' | 'gmaps' | 'logs';
+type PlatformType = 'youtube' | 'quora' | 'medium' | 'browser' | 'google' | 'gmaps' | 'logs' | 'reviews_published';
 
 const ProfileActivities: React.FC = () => {
   const { profileId } = useParams<{ profileId: string }>();
@@ -55,6 +55,11 @@ const ProfileActivities: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [syncingLocation, setSyncingLocation] = useState(false);
+
+  // Reseñas de Google Maps publicadas (kind: 4 y status: 1 o con review_link)
+  const publishedReviews = (activities.gmaps || []).filter(
+    (act: any) => act.kind === 4 && (act.status === 1 || Boolean(act.review_link && act.review_link.trim()))
+  );
 
   const handleSyncFromLocation = async () => {
     if (!profileId) return;
@@ -127,6 +132,8 @@ const ProfileActivities: React.FC = () => {
     setBulkText('');
     if (p === 'logs') {
       fetchActivityLogs();
+    } else if (p === 'reviews_published') {
+      // Pestaña dedicada a reseñas publicadas
     } else if (p === 'browser') {
       setActionType('visit_link');
     } else if (p === 'gmaps') {
@@ -256,7 +263,7 @@ const ProfileActivities: React.FC = () => {
   };
 
   // Filter activities for current platform and action type
-  const currentList = platform === 'logs' ? [] : ((activities as any)[platform] || []).filter((act: any) => {
+  const currentList = (platform === 'logs' || platform === 'reviews_published') ? [] : ((activities as any)[platform] || []).filter((act: any) => {
     if (platform === 'browser') {
       return true; // visit_link
     }
@@ -391,6 +398,20 @@ const ProfileActivities: React.FC = () => {
           </button>
           <button
             type="button"
+            className={`btn ${platform === 'reviews_published' ? 'btn-primary' : 'btn-secondary'}`}
+            style={{
+              borderRadius: '0.5rem 0.5rem 0 0',
+              padding: '0.65rem 1.25rem',
+              background: platform === 'reviews_published' ? '#d97706' : undefined,
+              borderColor: platform === 'reviews_published' ? '#d97706' : undefined,
+              color: platform === 'reviews_published' ? '#fff' : undefined,
+            }}
+            onClick={() => handlePlatformChange('reviews_published')}
+          >
+            ⭐ Reviews Publicadas ({publishedReviews.length})
+          </button>
+          <button
+            type="button"
             className={`btn ${platform === 'logs' ? 'btn-primary' : 'btn-secondary'}`}
             style={{
               borderRadius: '0.5rem 0.5rem 0 0',
@@ -478,6 +499,112 @@ const ProfileActivities: React.FC = () => {
                       </td>
                       <td style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text)' }}>
                         {log.message || '-'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        ) : platform === 'reviews_published' ? (
+          <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
+            <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  ⭐ Reseñas de Google Maps Publicadas ({publishedReviews.length})
+                </h3>
+                <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                  Place ID, calificación, texto de la reseña y link público verificado. Las reseñas son únicas (no se recargan en loop).
+                </p>
+              </div>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+                onClick={fetchProfileAndActivities}
+                disabled={loading}
+              >
+                <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+                {loading ? 'Actualizando...' : 'Recargar'}
+              </button>
+            </div>
+
+            {loading ? (
+              <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>Cargando reseñas...</div>
+            ) : publishedReviews.length === 0 ? (
+              <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                No hay reseñas publicadas para este perfil aún.
+              </div>
+            ) : (
+              <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                <thead>
+                  <tr style={{ background: 'var(--surface-hover)', borderBottom: '1px solid var(--border)' }}>
+                    <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>ID</th>
+                    <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Place ID / Lugar</th>
+                    <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Calificación</th>
+                    <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Texto de la Reseña</th>
+                    <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Link de la Reseña</th>
+                    <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Fecha Publicación</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {publishedReviews.map((rev: any) => (
+                    <tr key={rev.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                      <td style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', fontWeight: 'bold' }}>#{rev.id}</td>
+                      <td style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', maxWidth: '250px', wordBreak: 'break-all' }}>
+                        {rev.place_id ? (
+                          <a
+                            href={rev.place_id.startsWith('http') ? rev.place_id : `https://www.google.com/maps/place/?q=place_id:${rev.place_id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ color: '#38bdf8', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                          >
+                            <MapPin size={13} /> {rev.place_id}
+                          </a>
+                        ) : (
+                          '-'
+                        )}
+                      </td>
+                      <td style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
+                        <span style={{ color: '#f59e0b', fontWeight: 'bold', fontSize: '1rem' }}>
+                          {'★'.repeat(rev.rating || 5)}{'☆'.repeat(5 - (rev.rating || 5))}
+                        </span>
+                        <span style={{ marginLeft: '6px', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                          ({rev.rating || 5}/5)
+                        </span>
+                      </td>
+                      <td style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text)', maxWidth: '350px' }}>
+                        <div style={{ maxHeight: '100px', overflowY: 'auto', whiteSpace: 'pre-wrap', lineHeight: '1.4' }}>
+                          {rev.review_text || <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>Sin texto (sólo estrellas)</span>}
+                        </div>
+                      </td>
+                      <td style={{ padding: '0.85rem 1rem', fontSize: '0.85rem' }}>
+                        {rev.review_link && rev.review_link.trim() !== '' ? (
+                          <a
+                            href={rev.review_link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn btn-secondary"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              padding: '0.35rem 0.75rem',
+                              fontSize: '0.8rem',
+                              color: '#38bdf8',
+                              borderColor: 'rgba(56, 189, 248, 0.3)',
+                              textDecoration: 'none',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            <ExternalLink size={13} /> Ver Reseña
+                          </a>
+                        ) : (
+                          <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontStyle: 'italic' }}>No capturado</span>
+                        )}
+                      </td>
+                      <td style={{ padding: '0.85rem 1rem', fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                        {rev.finished_at ? new Date(rev.finished_at).toLocaleString() : (rev.updated_at ? new Date(rev.updated_at).toLocaleString() : '-')}
                       </td>
                     </tr>
                   ))}
@@ -1331,6 +1458,14 @@ const ProfileActivities: React.FC = () => {
                         {act.navigate_location && <div><strong>Navegar Ubicación:</strong> {act.navigate_location}</div>}
                         {act.review_text && <div><strong>Reseña:</strong> {act.review_text}</div>}
                         {act.rating !== undefined && act.rating !== null && platform === 'gmaps' && <div><strong>Rating:</strong> {'⭐'.repeat(act.rating)} ({act.rating}/5)</div>}
+                        {act.review_link && (
+                          <div>
+                            <strong>Link Reseña:</strong>{' '}
+                            <a href={act.review_link} target="_blank" rel="noreferrer" style={{ color: '#38bdf8', textDecoration: 'none' }}>
+                              🔗 Ver Reseña
+                            </a>
+                          </div>
+                        )}
 
                         {act.video_id && <div><strong>Video ID:</strong> {act.video_id}</div>}
                         {act.comment_video_id && <div><strong>Comment Video ID:</strong> {act.comment_video_id}</div>}
