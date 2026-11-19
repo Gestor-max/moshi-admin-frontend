@@ -1,14 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from './api';
+import { useAuth } from './AuthContext';
 import { useLanguage } from './LanguageContext';
-import { MapPin, Plus, Search, Trash2, Edit2, X, Save, Building2, ListChecks } from 'lucide-react';
+import { MapPin, Plus, Search, Trash2, Edit2, X, Save, Building2, ListChecks, Globe } from 'lucide-react';
 
 interface LocationItem {
   id: number;
   state: string;
   location: string;
   user_id: number;
+  is_shared?: number;
+  user?: {
+    id: number;
+    name: string;
+    email: string;
+  };
   _count?: {
     profiles?: number;
     youtube_activities?: number;
@@ -21,6 +28,7 @@ interface LocationItem {
 }
 
 const Locations: React.FC = () => {
+  const { user, isAdmin } = useAuth();
   const { t } = useLanguage();
   const [locations, setLocations] = useState<LocationItem[]>([]);
   const [search, setSearch] = useState('');
@@ -29,6 +37,7 @@ const Locations: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newState, setNewState] = useState('');
   const [newLocationStr, setNewLocationStr] = useState('');
+  const [newIsShared, setNewIsShared] = useState(false);
 
   const fetchLocations = async (searchQuery = '') => {
     try {
@@ -67,10 +76,12 @@ const Locations: React.FC = () => {
       await api.post('/locations', {
         state: newState.trim(),
         location: newLocationStr.trim(),
+        is_shared: newIsShared ? 1 : 0,
       });
       setShowCreateModal(false);
       setNewState('');
       setNewLocationStr('');
+      setNewIsShared(false);
       fetchLocations(search);
     } catch (err) {
       console.error(err);
@@ -84,6 +95,7 @@ const Locations: React.FC = () => {
       await api.patch(`/locations/${editingLocation.id}`, {
         state: editingLocation.state,
         location: editingLocation.location,
+        is_shared: editingLocation.is_shared === 1 ? 1 : 0,
       });
       setEditingLocation(null);
       fetchLocations(search);
@@ -134,6 +146,7 @@ const Locations: React.FC = () => {
       ) : (
         <div className="list-container" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1rem' }}>
           {locations.map((loc) => {
+            const isOwner = !loc.user_id || loc.user_id === user?.id || isAdmin;
             const totalActivities =
               (loc._count?.youtube_activities || 0) +
               (loc._count?.google_activities || 0) +
@@ -171,12 +184,35 @@ const Locations: React.FC = () => {
                     >
                       <MapPin size={22} />
                     </div>
-                    <div>
-                      <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--text)' }}>
-                        {loc.location}
-                      </h3>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                        <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--text)' }}>
+                          {loc.location}
+                        </h3>
+                        {loc.is_shared === 1 && (
+                          <span
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.25rem',
+                              color: '#0284c7',
+                              background: 'rgba(56, 189, 248, 0.12)',
+                              padding: '0.15rem 0.45rem',
+                              borderRadius: '4px',
+                              fontSize: '0.72rem',
+                              fontWeight: 600,
+                            }}
+                            title={loc.user?.name ? `Compartida por ${loc.user.name}` : 'Compartida con todos'}
+                          >
+                            <Globe size={11} /> Compartida
+                          </span>
+                        )}
+                      </div>
                       <span style={{ fontSize: '0.85rem', color: 'var(--text-muted, #94a3b8)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                         <Building2 size={14} /> {loc.state}
+                        {loc.is_shared === 1 && loc.user?.name && !isOwner && (
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>• por {loc.user.name}</span>
+                        )}
                       </span>
                     </div>
                   </div>
@@ -213,43 +249,51 @@ const Locations: React.FC = () => {
                   >
                     <ListChecks size={15} /> Actividades ({totalActivities})
                   </Link>
-                  <button
-                    type="button"
-                    onClick={() => setEditingLocation(loc)}
-                    style={{
-                      flex: 1,
-                      padding: '0.4rem',
-                      background: 'rgba(255,255,255,0.05)',
-                      border: '1px solid var(--border)',
-                      borderRadius: '0.375rem',
-                      color: 'var(--text)',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.25rem',
-                      fontSize: '0.85rem',
-                    }}
-                  >
-                    <Edit2 size={15} /> {t('edit') || 'Editar'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(loc.id)}
-                    style={{
-                      padding: '0.4rem 0.6rem',
-                      background: 'rgba(239, 68, 68, 0.15)',
-                      border: '1px solid rgba(239, 68, 68, 0.3)',
-                      borderRadius: '0.375rem',
-                      color: '#ef4444',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <Trash2 size={15} />
-                  </button>
+                  {isOwner ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setEditingLocation(loc)}
+                        style={{
+                          flex: 1,
+                          padding: '0.4rem',
+                          background: 'rgba(255,255,255,0.05)',
+                          border: '1px solid var(--border)',
+                          borderRadius: '0.375rem',
+                          color: 'var(--text)',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '0.25rem',
+                          fontSize: '0.85rem',
+                        }}
+                      >
+                        <Edit2 size={15} /> {t('edit') || 'Editar'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(loc.id)}
+                        style={{
+                          padding: '0.4rem 0.6rem',
+                          background: 'rgba(239, 68, 68, 0.15)',
+                          border: '1px solid rgba(239, 68, 68, 0.3)',
+                          borderRadius: '0.375rem',
+                          color: '#ef4444',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </>
+                  ) : (
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', padding: '0 0.5rem' }}>
+                      Solo lectura
+                    </span>
+                  )}
                 </div>
               </div>
             );
@@ -281,7 +325,7 @@ const Locations: React.FC = () => {
                   style={{ width: '100%', padding: '0.6rem', borderRadius: '0.375rem', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
                 />
               </div>
-              <div style={{ marginBottom: '1.5rem' }}>
+              <div style={{ marginBottom: '1.25rem' }}>
                 <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.35rem', color: 'var(--text-muted)' }}>
                   {t('location_label') || 'Ciudad / Ubicación'}
                 </label>
@@ -293,6 +337,20 @@ const Locations: React.FC = () => {
                   onChange={(e) => setNewLocationStr(e.target.value)}
                   style={{ width: '100%', padding: '0.6rem', borderRadius: '0.375rem', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
                 />
+              </div>
+              <div style={{ marginBottom: '1.5rem', background: 'rgba(255, 255, 255, 0.03)', padding: '0.75rem', borderRadius: '0.375rem', border: '1px solid var(--border)' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', margin: 0, fontSize: '0.85rem', color: 'var(--text)' }}>
+                  <input
+                    type="checkbox"
+                    checked={newIsShared}
+                    onChange={(e) => setNewIsShared(e.target.checked)}
+                    style={{ width: '16px', height: '16px', accentColor: 'var(--primary)', cursor: 'pointer' }}
+                  />
+                  <span>Compartir con todos los usuarios</span>
+                </label>
+                <small style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '0.25rem', marginLeft: '1.5rem' }}>
+                  Si se activa, todos los demás usuarios del sistema podrán ver esta ubicación y usarla en sus perfiles.
+                </small>
               </div>
               <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
                 <button
@@ -334,7 +392,7 @@ const Locations: React.FC = () => {
                   style={{ width: '100%', padding: '0.6rem', borderRadius: '0.375rem', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
                 />
               </div>
-              <div style={{ marginBottom: '1.5rem' }}>
+              <div style={{ marginBottom: '1.25rem' }}>
                 <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.35rem', color: 'var(--text-muted)' }}>
                   {t('location_label') || 'Ciudad / Ubicación'}
                 </label>
@@ -345,6 +403,20 @@ const Locations: React.FC = () => {
                   onChange={(e) => setEditingLocation({ ...editingLocation, location: e.target.value })}
                   style={{ width: '100%', padding: '0.6rem', borderRadius: '0.375rem', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
                 />
+              </div>
+              <div style={{ marginBottom: '1.5rem', background: 'rgba(255, 255, 255, 0.03)', padding: '0.75rem', borderRadius: '0.375rem', border: '1px solid var(--border)' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', margin: 0, fontSize: '0.85rem', color: 'var(--text)' }}>
+                  <input
+                    type="checkbox"
+                    checked={editingLocation.is_shared === 1}
+                    onChange={(e) => setEditingLocation({ ...editingLocation, is_shared: e.target.checked ? 1 : 0 })}
+                    style={{ width: '16px', height: '16px', accentColor: 'var(--primary)', cursor: 'pointer' }}
+                  />
+                  <span>Compartir con todos los usuarios</span>
+                </label>
+                <small style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '0.25rem', marginLeft: '1.5rem' }}>
+                  Si se activa, todos los demás usuarios del sistema podrán ver esta ubicación y usarla en sus perfiles.
+                </small>
               </div>
               <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
                 <button

@@ -16,6 +16,7 @@ interface LocationItem {
   id: number;
   state: string;
   location: string;
+  is_shared?: number;
 }
 
 interface TagItem {
@@ -28,6 +29,7 @@ interface LoteItem {
   id: number;
   name: string;
   proveedor?: string;
+  is_shared?: number;
 }
 
 type TabType = 'basica' | 'credenciales' | 'empleo' | 'educacion' | 'ubicacion';
@@ -146,7 +148,7 @@ const NewProfile: React.FC = () => {
         ]);
         setProxies(resProxies.data);
         setLocations(resLocs.data);
-        setTags(resTags.data);
+        setTags((resTags.data || []).filter((t: any) => !t.is_system));
         setLotes(resLotes.data);
       } catch (err) {
         console.error(err);
@@ -400,7 +402,7 @@ const NewProfile: React.FC = () => {
                   <option value="">-- Sin Ubicación --</option>
                   {locations.map((loc) => (
                     <option key={loc.id} value={loc.id}>
-                      {loc.location} ({loc.state})
+                      {loc.location} ({loc.state}) {loc.is_shared === 1 ? '🌐' : ''}
                     </option>
                   ))}
                 </select>
@@ -417,7 +419,7 @@ const NewProfile: React.FC = () => {
                   <option value="">-- Sin Location Proxy --</option>
                   {locations.map((loc) => (
                     <option key={loc.id} value={loc.id}>
-                      {loc.location} ({loc.state})
+                      {loc.location} ({loc.state}) {loc.is_shared === 1 ? '🌐' : ''}
                     </option>
                   ))}
                 </select>
@@ -429,7 +431,7 @@ const NewProfile: React.FC = () => {
                   <option value="">-- Sin Location Proxy Alternativa --</option>
                   {locations.map((loc) => (
                     <option key={loc.id} value={loc.id}>
-                      {loc.location} ({loc.state})
+                      {loc.location} ({loc.state}) {loc.is_shared === 1 ? '🌐' : ''}
                     </option>
                   ))}
                 </select>
@@ -453,7 +455,7 @@ const NewProfile: React.FC = () => {
                   <option value="">-- Sin Lote --</option>
                   {lotes.map((l) => (
                     <option key={l.id} value={l.id}>
-                      {l.name} {l.proveedor ? `(${l.proveedor})` : ''}
+                      {l.name} {l.proveedor ? `(${l.proveedor})` : ''} {l.is_shared === 1 ? '🌐' : ''}
                     </option>
                   ))}
                 </select>
@@ -479,9 +481,10 @@ const NewProfile: React.FC = () => {
                   <option value={2}>En Preparación</option>
                   <option value={3}>Listo</option>
                   <option value={4}>Trabajando</option>
+                  <option value={5}>En Pausa</option>
                 </select>
                 <small style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '0.25rem', display: 'block' }}>
-                  Estado operativo: 1=Nuevo, 2=En Preparación, 3=Listo, 4=Trabajando.
+                  Estado operativo: 1=Nuevo, 2=En Preparación, 3=Listo, 4=Trabajando, 5=En Pausa.
                 </small>
               </div>
             </div>

@@ -1,12 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { api } from './api';
-import { Boxes, Plus, Edit2, Trash2, X, Save, AlertCircle, Search, Calendar, Building2, Users } from 'lucide-react';
+import { useAuth } from './AuthContext';
+import { Boxes, Plus, Edit2, Trash2, X, Save, AlertCircle, Search, Calendar, Building2, Users, Globe, Lock, Hash } from 'lucide-react';
 
 export interface LoteItem {
   id: number;
   name: string;
   fecha_compra: string;
   proveedor: string;
+  order_id?: string;
+  listing_id?: string;
+  is_shared?: number;
+  user_id?: number;
+  user?: {
+    id: number;
+    name: string;
+    email: string;
+  };
   created_at?: string;
   _count?: {
     profiles: number;
@@ -14,6 +24,7 @@ export interface LoteItem {
 }
 
 const Lotes: React.FC = () => {
+  const { user, isAdmin } = useAuth();
   const [lotes, setLotes] = useState<LoteItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -24,6 +35,9 @@ const Lotes: React.FC = () => {
   const [name, setName] = useState('');
   const [fechaCompra, setFechaCompra] = useState('');
   const [proveedor, setProveedor] = useState('');
+  const [orderId, setOrderId] = useState('');
+  const [listingId, setListingId] = useState('');
+  const [isShared, setIsShared] = useState(false);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -55,6 +69,9 @@ const Lotes: React.FC = () => {
     const today = new Date().toISOString().split('T')[0];
     setFechaCompra(today);
     setProveedor('');
+    setOrderId('');
+    setListingId('');
+    setIsShared(false);
     setError('');
     setIsModalOpen(true);
   };
@@ -64,6 +81,9 @@ const Lotes: React.FC = () => {
     setName(l.name);
     setFechaCompra(l.fecha_compra || '');
     setProveedor(l.proveedor || '');
+    setOrderId(l.order_id || '');
+    setListingId(l.listing_id || '');
+    setIsShared(l.is_shared === 1);
     setError('');
     setIsModalOpen(true);
   };
@@ -88,6 +108,9 @@ const Lotes: React.FC = () => {
         name: name.trim(),
         fecha_compra: fechaCompra.trim(),
         proveedor: proveedor.trim(),
+        order_id: orderId.trim(),
+        listing_id: listingId.trim(),
+        is_shared: isShared ? 1 : 0,
       };
 
       if (editingLote) {
@@ -197,113 +220,178 @@ const Lotes: React.FC = () => {
                 <tr style={{ borderBottom: '1px solid var(--border-color)', background: 'rgba(0, 0, 0, 0.02)' }}>
                   <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>ID</th>
                   <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Nombre del Lote</th>
+                  <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Nº Orden / Listado</th>
                   <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Fecha de Compra</th>
                   <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Proveedor</th>
+                  <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Acceso</th>
                   <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Perfiles Asignados</th>
                   <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', textAlign: 'right' }}>Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {lotes.map((lote) => (
-                  <tr key={lote.id} style={{ borderBottom: '1px solid var(--border-color)', transition: 'background 0.2s ease' }}>
-                    <td style={{ padding: '1rem 1.25rem', fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-                      #{lote.id}
-                    </td>
-                    <td style={{ padding: '1rem 1.25rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                        <span style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          width: '32px',
-                          height: '32px',
-                          borderRadius: '8px',
-                          background: 'rgba(249, 115, 22, 0.12)',
-                          color: 'var(--primary)',
-                        }}>
-                          <Boxes size={18} />
-                        </span>
-                        <div>
-                          <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.95rem' }}>{lote.name}</div>
-                          {lote.created_at && (
-                            <small style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
-                              Registrado: {new Date(lote.created_at).toLocaleDateString()}
-                            </small>
+                {lotes.map((lote) => {
+                  const isOwner = !lote.user_id || lote.user_id === user?.id || isAdmin;
+                  return (
+                    <tr key={lote.id} style={{ borderBottom: '1px solid var(--border-color)', transition: 'background 0.2s ease' }}>
+                      <td style={{ padding: '1rem 1.25rem', fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                        #{lote.id}
+                      </td>
+                      <td style={{ padding: '1rem 1.25rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                          <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '8px',
+                            background: 'rgba(249, 115, 22, 0.12)',
+                            color: 'var(--primary)',
+                          }}>
+                            <Boxes size={18} />
+                          </span>
+                          <div>
+                            <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.95rem' }}>{lote.name}</div>
+                            {lote.created_at && (
+                              <small style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+                                Registrado: {new Date(lote.created_at).toLocaleDateString()}
+                              </small>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td style={{ padding: '1rem 1.25rem', fontSize: '0.85rem' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                          {lote.order_id ? (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: 'var(--text-main)' }}>
+                              <Hash size={13} style={{ color: 'var(--text-muted)' }} />
+                              <strong>Orden:</strong> {lote.order_id}
+                            </span>
+                          ) : null}
+                          {lote.listing_id ? (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: 'var(--text-muted)' }}>
+                              <strong>Listado:</strong> {lote.listing_id}
+                            </span>
+                          ) : null}
+                          {!lote.order_id && !lote.listing_id && (
+                            <span style={{ color: 'var(--text-muted)' }}>-</span>
                           )}
                         </div>
-                      </div>
-                    </td>
-                    <td style={{ padding: '1rem 1.25rem', fontSize: '0.9rem', color: 'var(--text-main)' }}>
-                      {lote.fecha_compra ? (
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(0,0,0,0.04)', padding: '0.25rem 0.6rem', borderRadius: '4px', fontSize: '0.85rem' }}>
-                          <Calendar size={14} style={{ color: 'var(--text-muted)' }} />
-                          {lote.fecha_compra}
-                        </div>
-                      ) : (
-                        <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No especificada</span>
-                      )}
-                    </td>
-                    <td style={{ padding: '1rem 1.25rem', fontSize: '0.9rem', color: 'var(--text-main)' }}>
-                      {lote.proveedor ? (
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
-                          <Building2 size={15} style={{ color: 'var(--primary)', opacity: 0.8 }} />
-                          <span style={{ fontWeight: 500 }}>{lote.proveedor}</span>
-                        </div>
-                      ) : (
-                        <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>-</span>
-                      )}
-                    </td>
-                    <td style={{ padding: '1rem 1.25rem' }}>
-                      <span
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.35rem',
-                          background: (lote._count?.profiles || 0) > 0 ? 'rgba(16, 185, 129, 0.12)' : 'rgba(100, 116, 139, 0.1)',
-                          color: (lote._count?.profiles || 0) > 0 ? '#10b981' : 'var(--text-muted)',
-                          padding: '0.25rem 0.6rem',
-                          borderRadius: '9999px',
-                          fontSize: '0.8rem',
-                          fontWeight: 600,
-                        }}
-                      >
-                        <Users size={13} />
-                        {lote._count?.profiles || 0} perfiles
-                      </span>
-                    </td>
-                    <td style={{ padding: '1rem 1.25rem', textAlign: 'right' }}>
-                      <div style={{ display: 'inline-flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                        <button
-                          onClick={() => openEditModal(lote)}
-                          className="btn-secondary"
-                          style={{ padding: '0.4rem 0.6rem', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
-                          title="Editar Lote"
-                        >
-                          <Edit2 size={15} />
-                          <span style={{ fontSize: '0.8rem' }}>Editar</span>
-                        </button>
-                        <button
-                          onClick={() => handleDelete(lote.id)}
+                      </td>
+                      <td style={{ padding: '1rem 1.25rem', fontSize: '0.9rem', color: 'var(--text-main)' }}>
+                        {lote.fecha_compra ? (
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(0,0,0,0.04)', padding: '0.25rem 0.6rem', borderRadius: '4px', fontSize: '0.85rem' }}>
+                            <Calendar size={14} style={{ color: 'var(--text-muted)' }} />
+                            {lote.fecha_compra}
+                          </div>
+                        ) : (
+                          <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No especificada</span>
+                        )}
+                      </td>
+                      <td style={{ padding: '1rem 1.25rem', fontSize: '0.9rem', color: 'var(--text-main)' }}>
+                        {lote.proveedor ? (
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                            <Building2 size={15} style={{ color: 'var(--primary)', opacity: 0.8 }} />
+                            <span style={{ fontWeight: 500 }}>{lote.proveedor}</span>
+                          </div>
+                        ) : (
+                          <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>-</span>
+                        )}
+                      </td>
+                      <td style={{ padding: '1rem 1.25rem' }}>
+                        {lote.is_shared === 1 ? (
+                          <span
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.35rem',
+                              background: 'rgba(56, 189, 248, 0.12)',
+                              color: '#0284c7',
+                              padding: '0.25rem 0.6rem',
+                              borderRadius: '9999px',
+                              fontSize: '0.8rem',
+                              fontWeight: 600,
+                            }}
+                            title={lote.user?.name ? `Compartido por ${lote.user.name}` : 'Compartido con todos'}
+                          >
+                            <Globe size={13} />
+                            Compartido
+                          </span>
+                        ) : (
+                          <span
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.35rem',
+                              background: 'rgba(100, 116, 139, 0.1)',
+                              color: 'var(--text-muted)',
+                              padding: '0.25rem 0.6rem',
+                              borderRadius: '9999px',
+                              fontSize: '0.8rem',
+                              fontWeight: 500,
+                            }}
+                          >
+                            <Lock size={12} />
+                            Privado
+                          </span>
+                        )}
+                      </td>
+                      <td style={{ padding: '1rem 1.25rem' }}>
+                        <span
                           style={{
-                            padding: '0.4rem 0.6rem',
-                            borderRadius: '4px',
-                            border: '1px solid rgba(239, 68, 68, 0.25)',
-                            background: 'rgba(239, 68, 68, 0.08)',
-                            color: '#ef4444',
-                            cursor: 'pointer',
-                            display: 'flex',
+                            display: 'inline-flex',
                             alignItems: 'center',
-                            gap: '0.3rem',
+                            gap: '0.35rem',
+                            background: (lote._count?.profiles || 0) > 0 ? 'rgba(16, 185, 129, 0.12)' : 'rgba(100, 116, 139, 0.1)',
+                            color: (lote._count?.profiles || 0) > 0 ? '#10b981' : 'var(--text-muted)',
+                            padding: '0.25rem 0.6rem',
+                            borderRadius: '9999px',
+                            fontSize: '0.8rem',
+                            fontWeight: 600,
                           }}
-                          title="Eliminar Lote"
                         >
-                          <Trash2 size={15} />
-                          <span style={{ fontSize: '0.8rem' }}>Eliminar</span>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                          <Users size={13} />
+                          {lote._count?.profiles || 0} perfiles
+                        </span>
+                      </td>
+                      <td style={{ padding: '1rem 1.25rem', textAlign: 'right' }}>
+                        {isOwner ? (
+                          <div style={{ display: 'inline-flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                            <button
+                              onClick={() => openEditModal(lote)}
+                              className="btn-secondary"
+                              style={{ padding: '0.4rem 0.6rem', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+                              title="Editar Lote"
+                            >
+                              <Edit2 size={15} />
+                              <span style={{ fontSize: '0.8rem' }}>Editar</span>
+                            </button>
+                            <button
+                              onClick={() => handleDelete(lote.id)}
+                              style={{
+                                padding: '0.4rem 0.6rem',
+                                borderRadius: '4px',
+                                border: '1px solid rgba(239, 68, 68, 0.25)',
+                                background: 'rgba(239, 68, 68, 0.08)',
+                                color: '#ef4444',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.3rem',
+                              }}
+                              title="Eliminar Lote"
+                            >
+                              <Trash2 size={15} />
+                              <span style={{ fontSize: '0.8rem' }}>Eliminar</span>
+                            </button>
+                          </div>
+                        ) : (
+                          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Solo lectura</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -384,29 +472,77 @@ const Lotes: React.FC = () => {
                 />
               </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.4rem' }}>
-                  Fecha de Compra
-                </label>
-                <input
-                  type="date"
-                  className="input-field"
-                  value={fechaCompra}
-                  onChange={(e) => setFechaCompra(e.target.value)}
-                />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.4rem' }}>
+                    Número de Orden
+                  </label>
+                  <input
+                    type="text"
+                    className="input-field"
+                    placeholder="Ej. ORD-29381"
+                    value={orderId}
+                    onChange={(e) => setOrderId(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.4rem' }}>
+                    Número de Listado
+                  </label>
+                  <input
+                    type="text"
+                    className="input-field"
+                    placeholder="Ej. LIST-99201"
+                    value={listingId}
+                    onChange={(e) => setListingId(e.target.value)}
+                  />
+                </div>
               </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.4rem' }}>
-                  Proveedor
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.4rem' }}>
+                    Fecha de Compra
+                  </label>
+                  <input
+                    type="date"
+                    className="input-field"
+                    value={fechaCompra}
+                    onChange={(e) => setFechaCompra(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.4rem' }}>
+                    Proveedor
+                  </label>
+                  <input
+                    type="text"
+                    className="input-field"
+                    placeholder="Ej. AccsMarket, BuyAccs, Particular..."
+                    value={proveedor}
+                    onChange={(e) => setProveedor(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div style={{
+                background: 'rgba(255, 255, 255, 0.03)',
+                border: '1px solid var(--border-color)',
+                padding: '0.85rem 1rem',
+                borderRadius: '0.5rem',
+              }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', margin: 0, fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-main)' }}>
+                  <input
+                    type="checkbox"
+                    checked={isShared}
+                    onChange={(e) => setIsShared(e.target.checked)}
+                    style={{ width: '18px', height: '18px', accentColor: 'var(--primary)', cursor: 'pointer' }}
+                  />
+                  <span>Compartir con todos los usuarios</span>
                 </label>
-                <input
-                  type="text"
-                  className="input-field"
-                  placeholder="Ej. AccsMarket, BuyAccs, PVACodes, Particular..."
-                  value={proveedor}
-                  onChange={(e) => setProveedor(e.target.value)}
-                />
+                <small style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.78rem', marginTop: '0.35rem', marginLeft: '1.75rem' }}>
+                  Si se activa, todos los demás usuarios del sistema podrán ver y acceder a este lote para asignar perfiles.
+                </small>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>

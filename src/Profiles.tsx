@@ -136,6 +136,19 @@ const getStatusBadge = (status?: number) => {
         border: 'rgba(16, 185, 129, 0.35)',
       };
     case 4:
+      return {
+        label: 'Trabajando',
+        bg: 'rgba(139, 92, 246, 0.15)',
+        color: '#7c3aed',
+        border: 'rgba(139, 92, 246, 0.35)',
+      };
+    case 5:
+      return {
+        label: 'En Pausa',
+        bg: 'rgba(239, 68, 68, 0.15)',
+        color: '#ef4444',
+        border: 'rgba(239, 68, 68, 0.35)',
+      };
     default:
       return {
         label: 'Trabajando',

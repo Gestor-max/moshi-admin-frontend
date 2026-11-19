@@ -18,12 +18,23 @@ import {
   Copy,
   AlertCircle,
   Save,
+  Clock,
+  FileText,
+  Activity,
+  Bot,
+  User,
+  Video,
+  Globe,
+  History,
+  Calendar,
 } from 'lucide-react';
 
 interface TagItem {
   id: number;
   name: string;
   color?: string;
+  is_system?: boolean;
+  slug?: string;
 }
 
 interface LoteItem {
@@ -49,6 +60,41 @@ interface ProfileTagItem {
   profile_id: number;
   tag_id: number;
   tag: TagItem;
+}
+
+interface TagHistoryItem {
+  id: number;
+  profile_id: number;
+  tag_id: number;
+  action: 'added' | 'removed';
+  source: 'manual' | 'automatic';
+  created_at: string;
+  tag?: {
+    id: number;
+    name: string;
+    color?: string;
+    slug?: string;
+    is_system?: boolean;
+  };
+}
+
+interface ActivityLogItem {
+  id: number;
+  profile_id: number;
+  activity_name: string;
+  platform?: string;
+  status: string;
+  message?: string;
+  created_at: string;
+}
+
+interface ProfileActivitiesData {
+  youtube: any[];
+  quora: any[];
+  medium: any[];
+  browser: any[];
+  google: any[];
+  gmaps: any[];
 }
 
 interface ProfileItem {
@@ -102,6 +148,19 @@ const getStatusBadge = (status?: number) => {
         border: 'rgba(16, 185, 129, 0.35)',
       };
     case 4:
+      return {
+        label: 'Trabajando',
+        bg: 'rgba(139, 92, 246, 0.15)',
+        color: '#7c3aed',
+        border: 'rgba(139, 92, 246, 0.35)',
+      };
+    case 5:
+      return {
+        label: 'En Pausa',
+        bg: 'rgba(239, 68, 68, 0.15)',
+        color: '#ef4444',
+        border: 'rgba(239, 68, 68, 0.35)',
+      };
     default:
       return {
         label: 'Trabajando',
@@ -152,6 +211,14 @@ const ProfilesBoard: React.FC = () => {
   const [updatingProfileId, setUpdatingProfileId] = useState<number | null>(null);
   const [copiedEmail, setCopiedEmail] = useState<string | null>(null);
 
+  // Offcanvas Drawer State (Actividades, Logs, Tags history)
+  const [selectedProfileForOffcanvas, setSelectedProfileForOffcanvas] = useState<ProfileItem | null>(null);
+  const [offcanvasTab, setOffcanvasTab] = useState<'activities' | 'logs' | 'tags'>('activities');
+  const [offcanvasLoading, setOffcanvasLoading] = useState(false);
+  const [offcanvasActivities, setOffcanvasActivities] = useState<ProfileActivitiesData | null>(null);
+  const [offcanvasLogs, setOffcanvasLogs] = useState<ActivityLogItem[]>([]);
+  const [offcanvasTagHistory, setOffcanvasTagHistory] = useState<TagHistoryItem[]>([]);
+
   // Dynamic Tag Creation Modal State
   const [isTagModalOpen, setIsTagModalOpen] = useState(false);
   const [newTagName, setNewTagName] = useState('');
@@ -159,6 +226,40 @@ const ProfilesBoard: React.FC = () => {
   const [tagError, setTagError] = useState('');
   const [savingTag, setSavingTag] = useState(false);
   const [assignToProfileId, setAssignToProfileId] = useState<number | null>(null);
+
+  const handleOpenOffcanvas = async (p: ProfileItem) => {
+    setSelectedProfileForOffcanvas(p);
+    setOffcanvasLoading(true);
+    setOffcanvasTab('activities');
+    try {
+      const [resActs, resLogs, resTagHist] = await Promise.all([
+        api.get(`/activities/profile/${p.id}`).catch(() => ({ data: { youtube: [], quora: [], medium: [], browser: [], google: [], gmaps: [] } })),
+        api.get(`/activities/log/profile/${p.id}`).catch(() => ({ data: [] })),
+        api.get(`/profiles/${p.id}/tag-history`).catch(() => ({ data: [] })),
+      ]);
+      setOffcanvasActivities(resActs.data);
+      setOffcanvasLogs(resLogs.data || []);
+      setOffcanvasTagHistory(resTagHist.data || []);
+    } catch (err) {
+      console.error('Error fetching offcanvas data:', err);
+    } finally {
+      setOffcanvasLoading(false);
+    }
+  };
+
+  const handleCloseOffcanvas = () => {
+    setSelectedProfileForOffcanvas(null);
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setSelectedProfileForOffcanvas(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const fetchData = async () => {
     try {
@@ -211,7 +312,10 @@ const ProfilesBoard: React.FC = () => {
     );
 
     try {
-      await api.post(`/profiles/${profileId}/tags/${tagId}`);
+      await api.post(`/profiles/${profileId}/tags/${tagId}?source=manual`);
+      if (selectedProfileForOffcanvas?.id === profileId) {
+        api.get(`/profiles/${profileId}/tag-history`).then((res) => setOffcanvasTagHistory(res.data || []));
+      }
     } catch (err) {
       console.error('Error al asociar etiqueta:', err);
       fetchData();
@@ -247,7 +351,10 @@ const ProfilesBoard: React.FC = () => {
     );
 
     try {
-      await api.delete(`/profiles/${profileId}/tags/${tagId}`);
+      await api.delete(`/profiles/${profileId}/tags/${tagId}?source=manual`);
+      if (selectedProfileForOffcanvas?.id === profileId) {
+        api.get(`/profiles/${profileId}/tag-history`).then((res) => setOffcanvasTagHistory(res.data || []));
+      }
     } catch (err) {
       console.error('Error al remover etiqueta:', err);
       fetchData();
@@ -464,145 +571,156 @@ const ProfilesBoard: React.FC = () => {
               <option value={2}>En Preparación</option>
               <option value={3}>Listo</option>
               <option value={4}>Trabajando</option>
+              <option value={5}>En Pausa</option>
             </select>
           </div>
         </div>
 
-        {/* Tag Filter Pills Bar */}
-        <div style={{ marginTop: '1rem', paddingTop: '0.85rem', borderTop: '1px solid var(--border-color)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+        {/* Tag Filter Pills Bar (Inline) */}
+        <div style={{
+          marginTop: '1rem',
+          paddingTop: '0.85rem',
+          borderTop: '1px solid var(--border-color)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+          flexWrap: 'wrap',
+        }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', marginRight: '0.25rem', whiteSpace: 'nowrap' }}>
             <TagIcon size={14} style={{ color: 'var(--text-muted)' }} />
             <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               Filtrar por Etiqueta:
             </span>
           </div>
 
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
-            {/* Pill: Todas */}
-            <button
-              type="button"
-              onClick={() => setSelectedTagId('all')}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                padding: '0.35rem 0.75rem',
-                borderRadius: '9999px',
-                fontSize: '0.8rem',
-                fontWeight: selectedTagId === 'all' ? 700 : 500,
-                border: selectedTagId === 'all' ? '1px solid var(--primary)' : '1px solid var(--border-color)',
-                background: selectedTagId === 'all' ? 'rgba(249, 115, 22, 0.15)' : 'var(--card-bg)',
-                color: selectedTagId === 'all' ? 'var(--primary)' : 'var(--text-main)',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              <span>Todas</span>
-              <span style={{ background: selectedTagId === 'all' ? 'var(--primary)' : 'rgba(0,0,0,0.08)', color: selectedTagId === 'all' ? '#fff' : 'var(--text-muted)', fontSize: '0.7rem', padding: '0.1rem 0.4rem', borderRadius: '9999px', fontWeight: 600 }}>
-                {tagCounts.all || 0}
-              </span>
-            </button>
+          {/* Pill: Todas */}
+          <button
+            type="button"
+            onClick={() => setSelectedTagId('all')}
+            style={{
+              width: 'auto',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              padding: '0.35rem 0.75rem',
+              borderRadius: '9999px',
+              fontSize: '0.8rem',
+              fontWeight: selectedTagId === 'all' ? 700 : 500,
+              border: selectedTagId === 'all' ? '1px solid var(--primary)' : '1px solid var(--border-color)',
+              background: selectedTagId === 'all' ? 'rgba(249, 115, 22, 0.15)' : 'var(--card-bg)',
+              color: selectedTagId === 'all' ? 'var(--primary)' : 'var(--text-main)',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <span>Todas</span>
+            <span style={{ background: selectedTagId === 'all' ? 'var(--primary)' : 'rgba(0,0,0,0.08)', color: selectedTagId === 'all' ? '#fff' : 'var(--text-muted)', fontSize: '0.7rem', padding: '0.1rem 0.4rem', borderRadius: '9999px', fontWeight: 600 }}>
+              {tagCounts.all || 0}
+            </span>
+          </button>
 
-            {/* Pill: Sin Etiqueta */}
-            <button
-              type="button"
-              onClick={() => setSelectedTagId('none')}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                padding: '0.35rem 0.75rem',
-                borderRadius: '9999px',
-                fontSize: '0.8rem',
-                fontWeight: selectedTagId === 'none' ? 700 : 500,
-                border: selectedTagId === 'none' ? '1px solid #64748b' : '1px solid var(--border-color)',
-                background: selectedTagId === 'none' ? 'rgba(100, 116, 139, 0.15)' : 'var(--card-bg)',
-                color: selectedTagId === 'none' ? '#334155' : 'var(--text-muted)',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              <span>Sin Etiqueta</span>
-              <span style={{ background: 'rgba(0,0,0,0.08)', color: 'var(--text-muted)', fontSize: '0.7rem', padding: '0.1rem 0.4rem', borderRadius: '9999px', fontWeight: 600 }}>
-                {tagCounts.none || 0}
-              </span>
-            </button>
+          {/* Pill: Sin Etiqueta */}
+          <button
+            type="button"
+            onClick={() => setSelectedTagId('none')}
+            style={{
+              width: 'auto',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              padding: '0.35rem 0.75rem',
+              borderRadius: '9999px',
+              fontSize: '0.8rem',
+              fontWeight: selectedTagId === 'none' ? 700 : 500,
+              border: selectedTagId === 'none' ? '1px solid #64748b' : '1px solid var(--border-color)',
+              background: selectedTagId === 'none' ? 'rgba(100, 116, 139, 0.15)' : 'var(--card-bg)',
+              color: selectedTagId === 'none' ? '#334155' : 'var(--text-muted)',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <span>Sin Etiqueta</span>
+            <span style={{ background: 'rgba(0,0,0,0.08)', color: 'var(--text-muted)', fontSize: '0.7rem', padding: '0.1rem 0.4rem', borderRadius: '9999px', fontWeight: 600 }}>
+              {tagCounts.none || 0}
+            </span>
+          </button>
 
-            {/* Individual Tags */}
-            {tags.map((tag) => {
-              const isSelected = selectedTagId === tag.id;
-              const count = tagCounts[tag.id] || 0;
-              const tagColor = tag.color || '#3b82f6';
+          {/* Individual Tags */}
+          {tags.filter((t) => !t.is_system).map((tag) => {
+            const isSelected = selectedTagId === tag.id;
+            const count = tagCounts[tag.id] || 0;
+            const tagColor = tag.color || '#3b82f6';
 
-              return (
-                <button
-                  key={tag.id}
-                  type="button"
-                  onClick={() => setSelectedTagId(isSelected ? 'all' : tag.id)}
+            return (
+              <button
+                key={tag.id}
+                type="button"
+                onClick={() => setSelectedTagId(isSelected ? 'all' : tag.id)}
+                style={{
+                  width: 'auto',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  padding: '0.35rem 0.75rem',
+                  borderRadius: '9999px',
+                  fontSize: '0.8rem',
+                  fontWeight: isSelected ? 700 : 500,
+                  border: isSelected ? `2px solid ${tagColor}` : `1px solid var(--border-color)`,
+                  background: isSelected ? `${tagColor}22` : 'var(--card-bg)',
+                  color: isSelected ? tagColor : 'var(--text-main)',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <span
                   style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.45rem',
-                    padding: '0.35rem 0.75rem',
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    background: tagColor,
+                  }}
+                />
+                <span>{tag.name}</span>
+                <span
+                  style={{
+                    background: isSelected ? tagColor : 'rgba(0,0,0,0.08)',
+                    color: isSelected ? '#ffffff' : 'var(--text-muted)',
+                    fontSize: '0.7rem',
+                    padding: '0.1rem 0.4rem',
                     borderRadius: '9999px',
-                    fontSize: '0.8rem',
-                    fontWeight: isSelected ? 700 : 500,
-                    border: isSelected ? `2px solid ${tagColor}` : `1px solid var(--border-color)`,
-                    background: isSelected ? `${tagColor}22` : 'var(--card-bg)',
-                    color: isSelected ? tagColor : 'var(--text-main)',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
+                    fontWeight: 600,
                   }}
                 >
-                  <span
-                    style={{
-                      width: '8px',
-                      height: '8px',
-                      borderRadius: '50%',
-                      background: tagColor,
-                    }}
-                  />
-                  <span>{tag.name}</span>
-                  <span
-                    style={{
-                      background: isSelected ? tagColor : 'rgba(0,0,0,0.08)',
-                      color: isSelected ? '#ffffff' : 'var(--text-muted)',
-                      fontSize: '0.7rem',
-                      padding: '0.1rem 0.4rem',
-                      borderRadius: '9999px',
-                      fontWeight: 600,
-                    }}
-                  >
-                    {count}
-                  </span>
-                </button>
-              );
-            })}
+                  {count}
+                </span>
+              </button>
+            );
+          })}
 
-            {/* Botón dinámico: Crear Nueva Etiqueta */}
-            <button
-              type="button"
-              onClick={() => openCreateTagModal()}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.35rem',
-                padding: '0.35rem 0.75rem',
-                borderRadius: '9999px',
-                fontSize: '0.8rem',
-                fontWeight: 600,
-                border: '1px dashed var(--primary)',
-                background: 'rgba(249, 115, 22, 0.08)',
-                color: 'var(--primary)',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-              }}
-              title="Crear nueva etiqueta"
-            >
-              <Plus size={14} />
-              <span>Nueva Etiqueta</span>
-            </button>
-          </div>
+          {/* Botón dinámico: Crear Nueva Etiqueta */}
+          <button
+            type="button"
+            onClick={() => openCreateTagModal()}
+            style={{
+              width: 'auto',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              padding: '0.35rem 0.75rem',
+              borderRadius: '9999px',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              border: '1px dashed var(--primary)',
+              background: 'rgba(249, 115, 22, 0.08)',
+              color: 'var(--primary)',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+            title="Crear nueva etiqueta"
+          >
+            <Plus size={14} />
+            <span>Nueva Etiqueta</span>
+          </button>
         </div>
       </div>
 
@@ -678,7 +796,7 @@ const ProfilesBoard: React.FC = () => {
             const loteItem = p.lote || (p.lote_id ? lotes.find((l) => l.id === p.lote_id) : undefined);
             const profileTags = getProfileTags(p, tags);
             const profileTagIds = new Set(profileTags.map((t) => t.id));
-            const availableTagsForProfile = tags.filter((t) => !profileTagIds.has(t.id));
+            const availableTagsForProfile = tags.filter((t) => !t.is_system && !profileTagIds.has(t.id));
 
             return (
               <div
@@ -699,6 +817,7 @@ const ProfilesBoard: React.FC = () => {
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.85rem', marginBottom: '1rem' }}>
                   {/* Avatar */}
                   <div
+                    onClick={() => handleOpenOffcanvas(p)}
                     style={{
                       width: '46px',
                       height: '46px',
@@ -713,7 +832,9 @@ const ProfilesBoard: React.FC = () => {
                       flexShrink: 0,
                       overflow: 'hidden',
                       border: '2px solid rgba(249, 115, 22, 0.2)',
+                      cursor: 'pointer',
                     }}
+                    title={`Ver historial de ${p.name} ${p.lastname}`}
                   >
                     {p.img ? (
                       <img src={p.img} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -765,9 +886,17 @@ const ProfilesBoard: React.FC = () => {
                       </div>
                     </div>
 
-                    <Link
-                      to={`/profiles/${p.id}/edit`}
+                    <button
+                      type="button"
+                      onClick={() => handleOpenOffcanvas(p)}
                       style={{
+                        background: 'none',
+                        border: 'none',
+                        padding: 0,
+                        margin: 0,
+                        width: 'auto',
+                        cursor: 'pointer',
+                        textAlign: 'left',
                         fontSize: '1.05rem',
                         fontWeight: 700,
                         color: 'var(--text-main)',
@@ -776,11 +905,14 @@ const ProfilesBoard: React.FC = () => {
                         whiteSpace: 'nowrap',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
+                        transition: 'color 0.15s ease',
                       }}
-                      title={`${p.name} ${p.lastname}`}
+                      onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--primary)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-main)')}
+                      title={`Ver historial de ${p.name} ${p.lastname}`}
                     >
                       {p.name} {p.lastname}
-                    </Link>
+                    </button>
                   </div>
                 </div>
 
@@ -1350,6 +1482,606 @@ const ProfilesBoard: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* OFFCANVAS LATERAL IZQUIERDO: DETALLES, HISTORIAL Y LOGS */}
+      {/* ======================================================== */}
+      {selectedProfileForOffcanvas && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 2000,
+            display: 'flex',
+          }}
+        >
+          {/* Backdrop con blur */}
+          <div
+            onClick={handleCloseOffcanvas}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background: 'rgba(0, 0, 0, 0.65)',
+              backdropFilter: 'blur(3px)',
+              cursor: 'pointer',
+            }}
+          />
+
+          {/* Drawer Lateral Izquierdo */}
+          <div
+            style={{
+              position: 'relative',
+              width: '100%',
+              maxWidth: '640px',
+              height: '100vh',
+              background: 'var(--card-bg)',
+              borderRight: '1px solid var(--border-color)',
+              boxShadow: '12px 0 35px rgba(0, 0, 0, 0.45)',
+              display: 'flex',
+              flexDirection: 'column',
+              zIndex: 10,
+              overflow: 'hidden',
+            }}
+          >
+            {/* Header del Offcanvas */}
+            <div
+              style={{
+                padding: '1.25rem 1.5rem',
+                borderBottom: '1px solid var(--border-color)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '1rem',
+                background: 'rgba(0, 0, 0, 0.02)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', minWidth: 0 }}>
+                {/* Avatar */}
+                <div
+                  style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '50%',
+                    background: 'rgba(249, 115, 22, 0.15)',
+                    color: 'var(--primary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 700,
+                    fontSize: '1.2rem',
+                    flexShrink: 0,
+                    overflow: 'hidden',
+                    border: '2px solid rgba(249, 115, 22, 0.3)',
+                  }}
+                >
+                  {selectedProfileForOffcanvas.img ? (
+                    <img src={selectedProfileForOffcanvas.img} alt={selectedProfileForOffcanvas.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    `${(selectedProfileForOffcanvas.name || 'P')[0]}${(selectedProfileForOffcanvas.lastname || '')[0] || ''}`.toUpperCase()
+                  )}
+                </div>
+
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <h2 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                      {selectedProfileForOffcanvas.name} {selectedProfileForOffcanvas.lastname}
+                    </h2>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+                      #{selectedProfileForOffcanvas.id}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontFamily: 'monospace', marginTop: '0.15rem' }}>
+                    {selectedProfileForOffcanvas.gmail || selectedProfileForOffcanvas.profile_email || 'Sin correo asociado'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Botones de acción Header */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+                <Link
+                  to={`/profiles/${selectedProfileForOffcanvas.id}/edit`}
+                  className="btn-secondary"
+                  style={{
+                    width: 'auto',
+                    padding: '0.45rem 0.75rem',
+                    borderRadius: '0.375rem',
+                    fontSize: '0.8rem',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                    textDecoration: 'none',
+                    fontWeight: 600,
+                  }}
+                  title="Editar perfil completo"
+                >
+                  <Edit2 size={14} />
+                  <span>Editar</span>
+                </Link>
+
+                <button
+                  type="button"
+                  onClick={handleCloseOffcanvas}
+                  style={{
+                    width: 'auto',
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--text-muted)',
+                    cursor: 'pointer',
+                    padding: '0.4rem',
+                    borderRadius: '0.375rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                  title="Cerrar panel"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+
+            {/* Pestañas de Navegación del Offcanvas */}
+            <div
+              style={{
+                display: 'flex',
+                borderBottom: '1px solid var(--border-color)',
+                background: 'rgba(0, 0, 0, 0.01)',
+                padding: '0 1.25rem',
+                gap: '0.5rem',
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setOffcanvasTab('activities')}
+                style={{
+                  width: 'auto',
+                  background: 'none',
+                  border: 'none',
+                  borderBottom: offcanvasTab === 'activities' ? '2px solid var(--primary)' : '2px solid transparent',
+                  padding: '0.85rem 0.75rem',
+                  color: offcanvasTab === 'activities' ? 'var(--primary)' : 'var(--text-muted)',
+                  fontWeight: offcanvasTab === 'activities' ? 700 : 500,
+                  fontSize: '0.85rem',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <ListChecks size={16} />
+                <span>Actividades</span>
+                {offcanvasActivities && (
+                  <span
+                    style={{
+                      background: offcanvasTab === 'activities' ? 'var(--primary)' : 'rgba(0,0,0,0.08)',
+                      color: offcanvasTab === 'activities' ? '#fff' : 'var(--text-muted)',
+                      fontSize: '0.7rem',
+                      padding: '0.1rem 0.45rem',
+                      borderRadius: '9999px',
+                      fontWeight: 600,
+                    }}
+                  >
+                    {(offcanvasActivities.youtube?.length || 0) +
+                      (offcanvasActivities.google?.length || 0) +
+                      (offcanvasActivities.gmaps?.length || 0) +
+                      (offcanvasActivities.browser?.length || 0) +
+                      (offcanvasActivities.quora?.length || 0) +
+                      (offcanvasActivities.medium?.length || 0)}
+                  </span>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setOffcanvasTab('logs')}
+                style={{
+                  width: 'auto',
+                  background: 'none',
+                  border: 'none',
+                  borderBottom: offcanvasTab === 'logs' ? '2px solid var(--primary)' : '2px solid transparent',
+                  padding: '0.85rem 0.75rem',
+                  color: offcanvasTab === 'logs' ? 'var(--primary)' : 'var(--text-muted)',
+                  fontWeight: offcanvasTab === 'logs' ? 700 : 500,
+                  fontSize: '0.85rem',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <FileText size={16} />
+                <span>Logs</span>
+                <span
+                  style={{
+                    background: offcanvasTab === 'logs' ? 'var(--primary)' : 'rgba(0,0,0,0.08)',
+                    color: offcanvasTab === 'logs' ? '#fff' : 'var(--text-muted)',
+                    fontSize: '0.7rem',
+                    padding: '0.1rem 0.45rem',
+                    borderRadius: '9999px',
+                    fontWeight: 600,
+                  }}
+                >
+                  {offcanvasLogs.length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setOffcanvasTab('tags')}
+                style={{
+                  width: 'auto',
+                  background: 'none',
+                  border: 'none',
+                  borderBottom: offcanvasTab === 'tags' ? '2px solid var(--primary)' : '2px solid transparent',
+                  padding: '0.85rem 0.75rem',
+                  color: offcanvasTab === 'tags' ? 'var(--primary)' : 'var(--text-muted)',
+                  fontWeight: offcanvasTab === 'tags' ? 700 : 500,
+                  fontSize: '0.85rem',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <History size={16} />
+                <span>Historial Tags</span>
+                <span
+                  style={{
+                    background: offcanvasTab === 'tags' ? 'var(--primary)' : 'rgba(0,0,0,0.08)',
+                    color: offcanvasTab === 'tags' ? '#fff' : 'var(--text-muted)',
+                    fontSize: '0.7rem',
+                    padding: '0.1rem 0.45rem',
+                    borderRadius: '9999px',
+                    fontWeight: 600,
+                  }}
+                >
+                  {offcanvasTagHistory.length}
+                </span>
+              </button>
+            </div>
+
+            {/* Contenido scrolleable del Offcanvas */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '1.25rem' }}>
+              {offcanvasLoading ? (
+                <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+                  <div style={{ marginBottom: '0.5rem', fontWeight: 600 }}>Cargando datos del perfil...</div>
+                  <small style={{ fontSize: '0.8rem' }}>Consultando actividades, bitácora y etiquetas</small>
+                </div>
+              ) : offcanvasTab === 'activities' ? (
+                /* ================= PESTAÑA: ACTIVIDADES ================= */
+                <div>
+                  {(() => {
+                    const acts = offcanvasActivities || { youtube: [], quora: [], medium: [], browser: [], google: [], gmaps: [] };
+                    const allList = [
+                      ...acts.youtube.map((a) => ({ ...a, platform: 'YouTube', icon: Video, color: '#ef4444' })),
+                      ...acts.google.map((a) => ({ ...a, platform: 'Google', icon: Search, color: '#3b82f6' })),
+                      ...acts.gmaps.map((a) => ({ ...a, platform: 'Google Maps', icon: MapPin, color: '#10b981' })),
+                      ...acts.browser.map((a) => ({ ...a, platform: 'Navegador Web', icon: Globe, color: '#8b5cf6' })),
+                      ...acts.quora.map((a) => ({ ...a, platform: 'Quora', icon: Activity, color: '#b91c1c' })),
+                      ...acts.medium.map((a) => ({ ...a, platform: 'Medium', icon: Activity, color: '#000000' })),
+                    ];
+
+                    if (allList.length === 0) {
+                      return (
+                        <div style={{ textAlign: 'center', padding: '3rem 1.5rem', color: 'var(--text-muted)' }}>
+                          <ListChecks size={40} style={{ opacity: 0.4, margin: '0 auto 0.75rem auto' }} />
+                          <div style={{ fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.25rem' }}>Sin actividades asignadas</div>
+                          <p style={{ margin: 0, fontSize: '0.85rem' }}>Este perfil no tiene actividades de navegación o búsqueda pendientes.</p>
+                        </div>
+                      );
+                    }
+
+                    const completedCount = allList.filter((a) => Number(a.status) === 1).length;
+
+                    return (
+                      <div>
+                        {/* Resumen */}
+                        <div
+                          style={{
+                            display: 'flex',
+                            gap: '0.75rem',
+                            marginBottom: '1.25rem',
+                            padding: '0.75rem 1rem',
+                            background: 'rgba(255, 255, 255, 0.03)',
+                            borderRadius: '0.5rem',
+                            border: '1px solid var(--border-color)',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                          }}
+                        >
+                          <div style={{ fontSize: '0.85rem', color: 'var(--text-main)', fontWeight: 600 }}>
+                            Total: {allList.length} actividades
+                          </div>
+                          <div style={{ display: 'flex', gap: '0.5rem', fontSize: '0.75rem' }}>
+                            <span style={{ color: '#10b981', background: 'rgba(16, 185, 129, 0.12)', padding: '0.2rem 0.5rem', borderRadius: '4px', fontWeight: 600 }}>
+                              {completedCount} completadas
+                            </span>
+                            <span style={{ color: '#f59e0b', background: 'rgba(245, 158, 11, 0.12)', padding: '0.2rem 0.5rem', borderRadius: '4px', fontWeight: 600 }}>
+                              {allList.length - completedCount} pendientes
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Lista de actividades */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                          {allList.map((item, idx) => {
+                            const isCompleted = Number(item.status) === 1;
+                            const IconComp = item.icon || Activity;
+                            return (
+                              <div
+                                key={idx}
+                                style={{
+                                  padding: '0.85rem 1rem',
+                                  borderRadius: '0.5rem',
+                                  background: 'var(--card-bg)',
+                                  border: '1px solid var(--border-color)',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  gap: '0.45rem',
+                                }}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                                    <span
+                                      style={{
+                                        width: '24px',
+                                        height: '24px',
+                                        borderRadius: '6px',
+                                        background: `${item.color}22`,
+                                        color: item.color,
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                      }}
+                                    >
+                                      <IconComp size={14} />
+                                    </span>
+                                    <span style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-main)' }}>
+                                      {item.platform}
+                                    </span>
+                                    {item.kind !== undefined && (
+                                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                                        (Tipo {item.kind})
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <span
+                                    style={{
+                                      fontSize: '0.72rem',
+                                      fontWeight: 600,
+                                      padding: '0.15rem 0.5rem',
+                                      borderRadius: '9999px',
+                                      background: isCompleted ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+                                      color: isCompleted ? '#10b981' : '#f59e0b',
+                                      border: isCompleted ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(245, 158, 11, 0.3)',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '0.25rem',
+                                    }}
+                                  >
+                                    {isCompleted ? <CheckCircle2 size={11} /> : <Clock size={11} />}
+                                    {isCompleted ? 'Completada' : 'Pendiente'}
+                                  </span>
+                                </div>
+
+                                {/* Detalle de la actividad */}
+                                <div style={{ fontSize: '0.85rem', color: 'var(--text-main)', wordBreak: 'break-word', background: 'rgba(0,0,0,0.02)', padding: '0.45rem 0.6rem', borderRadius: '4px' }}>
+                                  {item.search_query && <div><strong>Búsqueda:</strong> {item.search_query}</div>}
+                                  {item.video_id && <div><strong>Video ID:</strong> {item.video_id}</div>}
+                                  {item.comment_video_id && <div><strong>Comentar en:</strong> {item.comment_video_id}</div>}
+                                  {item.likes_video_id && <div><strong>Like en:</strong> {item.likes_video_id}</div>}
+                                  {item.target_url && <div><strong>URL:</strong> {item.target_url}</div>}
+                                  {item.place_id && <div><strong>Place ID:</strong> {item.place_id}</div>}
+                                  {item.review_text && <div><strong>Reseña:</strong> {item.review_text}</div>}
+                                  {item.action_type && <div><strong>Acción:</strong> {item.action_type}</div>}
+                                </div>
+
+                                {/* Fechas programada y de finalización */}
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)', flexWrap: 'wrap', gap: '0.35rem' }}>
+                                  {(item.publish_date || item.publish_time) && (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                      <Calendar size={12} />
+                                      Programado: {item.publish_date} {item.publish_time}
+                                    </div>
+                                  )}
+                                  {item.finished_at && (
+                                    <div style={{ color: '#10b981' }}>
+                                      Finalizado: {new Date(item.finished_at).toLocaleString()}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              ) : offcanvasTab === 'logs' ? (
+                /* ================= PESTAÑA: LOGS ================= */
+                <div>
+                  {offcanvasLogs.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '3rem 1.5rem', color: 'var(--text-muted)' }}>
+                      <FileText size={40} style={{ opacity: 0.4, margin: '0 auto 0.75rem auto' }} />
+                      <div style={{ fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.25rem' }}>Sin logs registrados</div>
+                      <p style={{ margin: 0, fontSize: '0.85rem' }}>No se han generado eventos de ejecución para este perfil.</p>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      {offcanvasLogs.map((log) => {
+                        const isSuccess = log.status?.toLowerCase().includes('correcto') || log.status?.toLowerCase().includes('success') || log.status?.toLowerCase().includes('ok');
+                        return (
+                          <div
+                            key={log.id}
+                            style={{
+                              padding: '0.85rem 1rem',
+                              borderRadius: '0.5rem',
+                              background: 'var(--card-bg)',
+                              border: '1px solid var(--border-color)',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '0.35rem',
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                <span
+                                  style={{
+                                    fontSize: '0.72rem',
+                                    fontWeight: 700,
+                                    padding: '0.12rem 0.45rem',
+                                    borderRadius: '4px',
+                                    background: isSuccess ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                                    color: isSuccess ? '#10b981' : '#ef4444',
+                                  }}
+                                >
+                                  {log.status || 'Info'}
+                                </span>
+                                <span style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-main)' }}>
+                                  {log.activity_name || log.platform || 'Actividad'}
+                                </span>
+                              </div>
+                              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                {new Date(log.created_at).toLocaleString()}
+                              </span>
+                            </div>
+
+                            {log.message && (
+                              <div
+                                style={{
+                                  fontSize: '0.8rem',
+                                  color: 'var(--text-main)',
+                                  background: 'rgba(0, 0, 0, 0.03)',
+                                  padding: '0.45rem 0.6rem',
+                                  borderRadius: '4px',
+                                  fontFamily: 'monospace',
+                                  whiteSpace: 'pre-wrap',
+                                  wordBreak: 'break-word',
+                                }}
+                              >
+                                {log.message}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* ================= PESTAÑA: HISTORIAL DE TAGS ================= */
+                <div>
+                  {offcanvasTagHistory.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '3rem 1.5rem', color: 'var(--text-muted)' }}>
+                      <History size={40} style={{ opacity: 0.4, margin: '0 auto 0.75rem auto' }} />
+                      <div style={{ fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.25rem' }}>Sin historial de etiquetas</div>
+                      <p style={{ margin: 0, fontSize: '0.85rem' }}>Aún no se han registrado eventos de adición o remoción de etiquetas para este perfil.</p>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      {offcanvasTagHistory.map((item) => {
+                        const isAdded = item.action === 'added';
+                        const isAuto = item.source === 'automatic';
+                        const tagColor = item.tag?.color || '#3b82f6';
+
+                        return (
+                          <div
+                            key={item.id}
+                            style={{
+                              padding: '0.85rem 1rem',
+                              borderRadius: '0.5rem',
+                              background: 'var(--card-bg)',
+                              border: '1px solid var(--border-color)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              gap: '0.75rem',
+                              flexWrap: 'wrap',
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                              {/* Acción badge */}
+                              <span
+                                style={{
+                                  fontSize: '0.75rem',
+                                  fontWeight: 700,
+                                  padding: '0.2rem 0.55rem',
+                                  borderRadius: '9999px',
+                                  background: isAdded ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                                  color: isAdded ? '#10b981' : '#ef4444',
+                                  border: isAdded ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(239, 68, 68, 0.3)',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.3rem',
+                                }}
+                              >
+                                {isAdded ? <Plus size={12} /> : <X size={12} />}
+                                {isAdded ? 'Agregada' : 'Quitada'}
+                              </span>
+
+                              {/* Tag pill */}
+                              <span
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.35rem',
+                                  padding: '0.2rem 0.6rem',
+                                  borderRadius: '9999px',
+                                  fontSize: '0.8rem',
+                                  fontWeight: 600,
+                                  background: `${tagColor}22`,
+                                  color: tagColor,
+                                  border: `1px solid ${tagColor}44`,
+                                }}
+                              >
+                                <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: tagColor }} />
+                                {item.tag?.name || `Etiqueta #${item.tag_id}`}
+                                {item.tag?.is_system && (
+                                  <span style={{ fontSize: '0.65rem', opacity: 0.8, textTransform: 'uppercase' }}>
+                                    (Sistema)
+                                  </span>
+                                )}
+                              </span>
+
+                              {/* Source badge: Manual vs Automática */}
+                              <span
+                                style={{
+                                  fontSize: '0.7rem',
+                                  fontWeight: 600,
+                                  padding: '0.15rem 0.45rem',
+                                  borderRadius: '4px',
+                                  background: isAuto ? 'rgba(139, 92, 246, 0.12)' : 'rgba(14, 165, 233, 0.12)',
+                                  color: isAuto ? '#8b5cf6' : '#0284c7',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.25rem',
+                                }}
+                              >
+                                {isAuto ? <Bot size={11} /> : <User size={11} />}
+                                {isAuto ? 'Automática' : 'Manual'}
+                              </span>
+                            </div>
+
+                            {/* Timestamp */}
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                              {new Date(item.created_at).toLocaleString()}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

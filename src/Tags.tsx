@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { api } from './api';
-import { Tag as TagIcon, Plus, Edit2, Trash2, X, Save, AlertCircle, Check } from 'lucide-react';
+import { Tag as TagIcon, Plus, Edit2, Trash2, X, Save, AlertCircle, Check, Lock } from 'lucide-react';
 
 interface TagItem {
   id: number;
   name: string;
   color?: string;
+  is_system?: boolean;
+  slug?: string;
   _count?: {
-    profiles: number;
+    profiles?: number;
+    profile_tags?: number;
   };
 }
 
@@ -59,6 +62,7 @@ const Tags: React.FC = () => {
   };
 
   const openEditModal = (t: TagItem) => {
+    if (t.is_system) return;
     setEditingTag(t);
     setName(t.name);
     setColor(t.color || '#3b82f6');
@@ -83,6 +87,11 @@ const Tags: React.FC = () => {
 
     try {
       if (editingTag) {
+        if (editingTag.is_system) {
+          setError('Las etiquetas de sistema no se pueden editar.');
+          setSaving(false);
+          return;
+        }
         await api.patch(`/tags/${editingTag.id}`, { name: name.trim(), color });
       } else {
         await api.post('/tags', { name: name.trim(), color });
@@ -97,6 +106,12 @@ const Tags: React.FC = () => {
   };
 
   const handleDelete = async (id: number) => {
+    const t = tags.find((x) => x.id === id);
+    if (t?.is_system) {
+      alert('Las etiquetas de sistema no se pueden eliminar.');
+      return;
+    }
+
     if (!window.confirm('¿Seguro que deseas eliminar esta etiqueta? Los perfiles asociados quedarán sin etiqueta.')) {
       return;
     }
@@ -168,53 +183,90 @@ const Tags: React.FC = () => {
             <tbody>
               {tags.map((t) => {
                 const tagColor = t.color || '#3b82f6';
+                const countProfiles = t._count?.profile_tags ?? t._count?.profiles ?? 0;
                 return (
                   <tr key={t.id} style={{ borderBottom: '1px solid var(--border)' }}>
                     <td style={{ padding: '1rem', fontSize: '0.875rem', fontWeight: 600 }}>#{t.id}</td>
                     <td style={{ padding: '1rem' }}>
-                      <span
-                        className="badge"
-                        style={{
-                          background: `${tagColor}22`,
-                          color: tagColor,
-                          border: `1px solid ${tagColor}66`,
-                          fontWeight: 'bold',
-                          fontSize: '0.85rem',
-                          padding: '0.3rem 0.65rem',
-                          borderRadius: '9999px',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.4rem',
-                        }}
-                      >
-                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: tagColor }} />
-                        {t.name}
-                      </span>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span
+                          className="badge"
+                          style={{
+                            background: `${tagColor}22`,
+                            color: tagColor,
+                            border: `1px solid ${tagColor}66`,
+                            fontWeight: 'bold',
+                            fontSize: '0.85rem',
+                            padding: '0.3rem 0.65rem',
+                            borderRadius: '9999px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.4rem',
+                          }}
+                        >
+                          <span style={{ width: 8, height: 8, borderRadius: '50%', background: tagColor }} />
+                          {t.name}
+                        </span>
+                        {t.is_system && (
+                          <span
+                            style={{
+                              fontSize: '0.7rem',
+                              padding: '0.15rem 0.5rem',
+                              borderRadius: '4px',
+                              background: 'rgba(100, 116, 139, 0.15)',
+                              color: 'var(--text-muted)',
+                              fontWeight: 600,
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.04em',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.25rem',
+                            }}
+                          >
+                            <Lock size={10} /> Sistema
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td style={{ padding: '1rem', fontSize: '0.85rem', fontFamily: 'monospace' }}>
                       {tagColor}
                     </td>
                     <td style={{ padding: '1rem', fontSize: '0.875rem' }}>
                       <span className="badge" style={{ background: 'var(--surface-hover)', color: 'var(--text)' }}>
-                        {t._count?.profiles || 0} perfiles
+                        {countProfiles} perfiles
                       </span>
                     </td>
                     <td style={{ padding: '1rem', textAlign: 'right' }}>
-                      <div style={{ display: 'inline-flex', gap: '0.4rem', justifyContent: 'flex-end' }}>
-                        <button
-                          className="btn btn-secondary"
-                          style={{ padding: '0.35rem 0.6rem', fontSize: '0.8rem' }}
-                          onClick={() => openEditModal(t)}
-                        >
-                          <Edit2 size={14} /> Editar
-                        </button>
-                        <button
-                          className="btn btn-secondary"
-                          style={{ padding: '0.35rem 0.6rem', fontSize: '0.8rem', color: '#ef4444' }}
-                          onClick={() => handleDelete(t.id)}
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                      <div style={{ display: 'inline-flex', gap: '0.4rem', justifyContent: 'flex-end', alignItems: 'center' }}>
+                        {t.is_system ? (
+                          <span
+                            style={{
+                              fontSize: '0.78rem',
+                              color: 'var(--text-muted)',
+                              fontStyle: 'italic',
+                              padding: '0.35rem 0.6rem',
+                            }}
+                          >
+                            Protegida
+                          </span>
+                        ) : (
+                          <>
+                            <button
+                              className="btn btn-secondary"
+                              style={{ padding: '0.35rem 0.6rem', fontSize: '0.8rem' }}
+                              onClick={() => openEditModal(t)}
+                            >
+                              <Edit2 size={14} /> Editar
+                            </button>
+                            <button
+                              className="btn btn-secondary"
+                              style={{ padding: '0.35rem 0.6rem', fontSize: '0.8rem', color: '#ef4444' }}
+                              onClick={() => handleDelete(t.id)}
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -264,24 +316,23 @@ const Tags: React.FC = () => {
               <X size={20} />
             </button>
 
-            <h3 style={{ margin: '0 0 1.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <TagIcon size={20} color="var(--primary)" />
-              {editingTag ? 'Editar Etiqueta' : 'Nueva Etiqueta'}
-            </h3>
+            <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: 0 }}>
+              <TagIcon size={22} color={color} /> {editingTag ? 'Editar Etiqueta' : 'Nueva Etiqueta'}
+            </h2>
 
             {error && (
               <div
                 style={{
                   background: 'rgba(239, 68, 68, 0.1)',
-                  border: '1px solid rgba(239, 68, 68, 0.3)',
-                  color: '#ef4444',
+                  border: '1px solid var(--danger)',
+                  color: 'var(--danger)',
                   padding: '0.75rem',
-                  borderRadius: '0.5rem',
-                  marginBottom: '1rem',
-                  fontSize: '0.85rem',
+                  borderRadius: '6px',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.5rem',
+                  fontSize: '0.875rem',
+                  marginBottom: '1rem',
                 }}
               >
                 <AlertCircle size={16} /> {error}
@@ -289,37 +340,62 @@ const Tags: React.FC = () => {
             )}
 
             <form onSubmit={handleSave}>
-              <div className="form-group" style={{ marginBottom: '1.25rem' }}>
-                <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 600, fontSize: '0.85rem' }}>
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.4rem' }}>
                   Nombre de la Etiqueta *
                 </label>
                 <input
                   type="text"
                   className="input-field"
-                  placeholder="Ej. VIP, Texas Leads, Prioridad Alta..."
+                  placeholder="Ej: Clientes VIP, Warm Up..."
                   value={name}
                   onChange={(e) => setName(e.target.value)}
+                  autoFocus
                   required
                 />
               </div>
 
-              <div className="form-group" style={{ marginBottom: '1.25rem' }}>
-                <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 600, fontSize: '0.85rem' }}>
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.4rem' }}>
                   Color Identificador
                 </label>
-                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.75rem' }}>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+                  {PRESET_COLORS.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setColor(c)}
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '50%',
+                        background: c,
+                        border: color === c ? '2px solid white' : '2px solid transparent',
+                        outline: color === c ? `2px solid ${c}` : 'none',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'white',
+                      }}
+                    >
+                      {color === c && <Check size={16} />}
+                    </button>
+                  ))}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                   <input
                     type="color"
                     value={color}
                     onChange={(e) => setColor(e.target.value)}
                     style={{
-                      width: '44px',
-                      height: '38px',
-                      padding: '2px',
+                      width: '40px',
+                      height: '36px',
+                      padding: 0,
+                      borderRadius: '4px',
                       border: '1px solid var(--border)',
-                      borderRadius: '0.375rem',
                       cursor: 'pointer',
-                      background: 'transparent',
+                      background: 'none',
                     }}
                   />
                   <input
@@ -327,41 +403,25 @@ const Tags: React.FC = () => {
                     className="input-field"
                     value={color}
                     onChange={(e) => setColor(e.target.value)}
-                    style={{ fontFamily: 'monospace' }}
+                    placeholder="#3b82f6"
+                    style={{ flex: 1, fontFamily: 'monospace' }}
                   />
-                </div>
-
-                {/* Paleta rápida de colores */}
-                <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                  {PRESET_COLORS.map((c) => (
-                    <button
-                      key={c}
-                      type="button"
-                      onClick={() => setColor(c)}
-                      style={{
-                        width: '28px',
-                        height: '28px',
-                        borderRadius: '50%',
-                        background: c,
-                        border: color === c ? '2px solid white' : '1px solid transparent',
-                        boxShadow: color === c ? '0 0 0 2px var(--primary)' : 'none',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      {color === c && <Check size={14} color="white" />}
-                    </button>
-                  ))}
                 </div>
               </div>
 
-              {/* Vista Previa de la Etiqueta */}
-              <div style={{ marginBottom: '1.5rem', padding: '0.75rem', background: 'var(--surface-hover)', borderRadius: '0.5rem' }}>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.35rem' }}>
-                  Vista previa:
-                </span>
+              {/* Vista previa de cómo lucirá */}
+              <div
+                style={{
+                  background: 'var(--surface-hover)',
+                  padding: '1rem',
+                  borderRadius: '6px',
+                  marginBottom: '1.5rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Vista previa:</span>
                 <span
                   className="badge"
                   style={{
@@ -370,7 +430,7 @@ const Tags: React.FC = () => {
                     border: `1px solid ${color}66`,
                     fontWeight: 'bold',
                     fontSize: '0.85rem',
-                    padding: '0.35rem 0.75rem',
+                    padding: '0.3rem 0.65rem',
                     borderRadius: '9999px',
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -378,16 +438,16 @@ const Tags: React.FC = () => {
                   }}
                 >
                   <span style={{ width: 8, height: 8, borderRadius: '50%', background: color }} />
-                  {name.trim() || 'Nombre Etiqueta'}
+                  {name.trim() || 'Nombre de la etiqueta'}
                 </span>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
                 <button type="button" className="btn btn-secondary" onClick={closeModal} disabled={saving}>
                   Cancelar
                 </button>
                 <button type="submit" className="btn btn-primary" disabled={saving}>
-                  <Save size={16} /> {saving ? 'Guardando...' : editingTag ? 'Guardar Cambios' : 'Crear Etiqueta'}
+                  <Save size={16} /> {saving ? 'Guardando...' : editingTag ? 'Actualizar' : 'Crear Etiqueta'}
                 </button>
               </div>
             </form>
