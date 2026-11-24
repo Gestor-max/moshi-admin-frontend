@@ -11,6 +11,18 @@ interface LocationItem {
   location: string;
   user_id: number;
   is_shared?: number;
+  location_proxy_id?: number | null;
+  location_proxy_alt_id?: number | null;
+  location_proxy?: {
+    id: number;
+    location: string;
+    state: string;
+  } | null;
+  location_proxy_alt?: {
+    id: number;
+    location: string;
+    state: string;
+  } | null;
   user?: {
     id: number;
     name: string;
@@ -38,6 +50,8 @@ const Locations: React.FC = () => {
   const [newState, setNewState] = useState('');
   const [newLocationStr, setNewLocationStr] = useState('');
   const [newIsShared, setNewIsShared] = useState(false);
+  const [newLocationProxyId, setNewLocationProxyId] = useState('');
+  const [newLocationProxyAltId, setNewLocationProxyAltId] = useState('');
 
   const fetchLocations = async (searchQuery = '') => {
     try {
@@ -77,11 +91,15 @@ const Locations: React.FC = () => {
         state: newState.trim(),
         location: newLocationStr.trim(),
         is_shared: newIsShared ? 1 : 0,
+        location_proxy_id: newLocationProxyId ? Number(newLocationProxyId) : null,
+        location_proxy_alt_id: newLocationProxyAltId ? Number(newLocationProxyAltId) : null,
       });
       setShowCreateModal(false);
       setNewState('');
       setNewLocationStr('');
       setNewIsShared(false);
+      setNewLocationProxyId('');
+      setNewLocationProxyAltId('');
       fetchLocations(search);
     } catch (err) {
       console.error(err);
@@ -96,6 +114,8 @@ const Locations: React.FC = () => {
         state: editingLocation.state,
         location: editingLocation.location,
         is_shared: editingLocation.is_shared === 1 ? 1 : 0,
+        location_proxy_id: editingLocation.location_proxy_id ? Number(editingLocation.location_proxy_id) : null,
+        location_proxy_alt_id: editingLocation.location_proxy_alt_id ? Number(editingLocation.location_proxy_alt_id) : null,
       });
       setEditingLocation(null);
       fetchLocations(search);
@@ -226,6 +246,21 @@ const Locations: React.FC = () => {
                       {totalActivities} actividades plantilla
                     </span>
                   </div>
+
+                  {(loc.location_proxy || loc.location_proxy_alt) && (
+                    <div style={{ fontSize: '0.78rem', marginTop: '0.6rem', padding: '0.4rem 0.6rem', borderRadius: '0.375rem', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                      {loc.location_proxy && (
+                        <span style={{ color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                          🛰️ Proxy: <strong>{loc.location_proxy.location} ({loc.location_proxy.state})</strong>
+                        </span>
+                      )}
+                      {loc.location_proxy_alt && (
+                        <span style={{ color: '#a78bfa', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                          🔄 Proxy Alt: <strong>{loc.location_proxy_alt.location} ({loc.location_proxy_alt.state})</strong>
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1.25rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border)' }}>
@@ -338,6 +373,43 @@ const Locations: React.FC = () => {
                   style={{ width: '100%', padding: '0.6rem', borderRadius: '0.375rem', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
                 />
               </div>
+
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.35rem', color: 'var(--text-muted)' }}>
+                  🛰️ Location Proxy (Opcional)
+                </label>
+                <select
+                  value={newLocationProxyId}
+                  onChange={(e) => setNewLocationProxyId(e.target.value)}
+                  style={{ width: '100%', padding: '0.6rem', borderRadius: '0.375rem', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
+                >
+                  <option value="">-- Sin Location Proxy --</option>
+                  {locations.map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.location} ({l.state}) {l.is_shared === 1 ? '🌐' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.35rem', color: 'var(--text-muted)' }}>
+                  🔄 Location Proxy Alternativa (Opcional)
+                </label>
+                <select
+                  value={newLocationProxyAltId}
+                  onChange={(e) => setNewLocationProxyAltId(e.target.value)}
+                  style={{ width: '100%', padding: '0.6rem', borderRadius: '0.375rem', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
+                >
+                  <option value="">-- Sin Location Proxy Alt --</option>
+                  {locations.map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.location} ({l.state}) {l.is_shared === 1 ? '🌐' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div style={{ marginBottom: '1.5rem', background: 'rgba(255, 255, 255, 0.03)', padding: '0.75rem', borderRadius: '0.375rem', border: '1px solid var(--border)' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', margin: 0, fontSize: '0.85rem', color: 'var(--text)' }}>
                   <input
@@ -404,6 +476,43 @@ const Locations: React.FC = () => {
                   style={{ width: '100%', padding: '0.6rem', borderRadius: '0.375rem', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
                 />
               </div>
+
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.35rem', color: 'var(--text-muted)' }}>
+                  🛰️ Location Proxy (Opcional)
+                </label>
+                <select
+                  value={editingLocation.location_proxy_id ? String(editingLocation.location_proxy_id) : ''}
+                  onChange={(e) => setEditingLocation({ ...editingLocation, location_proxy_id: e.target.value ? Number(e.target.value) : null })}
+                  style={{ width: '100%', padding: '0.6rem', borderRadius: '0.375rem', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
+                >
+                  <option value="">-- Sin Location Proxy --</option>
+                  {locations.filter((l) => l.id !== editingLocation.id).map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.location} ({l.state}) {l.is_shared === 1 ? '🌐' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.35rem', color: 'var(--text-muted)' }}>
+                  🔄 Location Proxy Alternativa (Opcional)
+                </label>
+                <select
+                  value={editingLocation.location_proxy_alt_id ? String(editingLocation.location_proxy_alt_id) : ''}
+                  onChange={(e) => setEditingLocation({ ...editingLocation, location_proxy_alt_id: e.target.value ? Number(e.target.value) : null })}
+                  style={{ width: '100%', padding: '0.6rem', borderRadius: '0.375rem', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)' }}
+                >
+                  <option value="">-- Sin Location Proxy Alt --</option>
+                  {locations.filter((l) => l.id !== editingLocation.id).map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.location} ({l.state}) {l.is_shared === 1 ? '🌐' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div style={{ marginBottom: '1.5rem', background: 'rgba(255, 255, 255, 0.03)', padding: '0.75rem', borderRadius: '0.375rem', border: '1px solid var(--border)' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', margin: 0, fontSize: '0.85rem', color: 'var(--text)' }}>
                   <input

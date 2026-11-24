@@ -206,6 +206,8 @@ const ProfilesBoard: React.FC = () => {
   const [selectedTagId, setSelectedTagId] = useState<number | 'all' | 'none'>('all');
   const [selectedLoteId, setSelectedLoteId] = useState<number | 'all'>('all');
   const [selectedStatus, setSelectedStatus] = useState<number | 'all'>('all');
+  const [locations, setLocations] = useState<LocationItem[]>([]);
+  const [selectedLocationId, setSelectedLocationId] = useState<number | 'all' | 'none'>('all');
 
   // Inline feedback for tag updates
   const [updatingProfileId, setUpdatingProfileId] = useState<number | null>(null);
@@ -264,14 +266,17 @@ const ProfilesBoard: React.FC = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [resProfiles, resTags, resLotes] = await Promise.all([
+      const [resProfiles, resTags, resLotes, resLocations] = await Promise.all([
         api.get('/profiles?archived=false'),
         api.get('/tags'),
         api.get('/lotes'),
+        api.get('/locations'),
       ]);
-      setProfiles(resProfiles.data);
+      const sortedProfiles = Array.isArray(resProfiles.data) ? [...resProfiles.data].sort((a, b) => b.id - a.id) : resProfiles.data;
+      setProfiles(sortedProfiles);
       setTags(resTags.data);
       setLotes(resLotes.data);
+      setLocations(resLocations.data);
     } catch (err) {
       console.error('Error fetching board data:', err);
     } finally {
@@ -449,9 +454,16 @@ const ProfilesBoard: React.FC = () => {
         if (Number(p.status) !== selectedStatus) return false;
       }
 
+      // Location filter
+      if (selectedLocationId === 'none') {
+        if (p.location_id) return false;
+      } else if (selectedLocationId !== 'all') {
+        if (p.location_id !== selectedLocationId) return false;
+      }
+
       return true;
-    });
-  }, [profiles, search, selectedTagId, selectedLoteId, selectedStatus, tags]);
+    }).sort((a, b) => b.id - a.id);
+  }, [profiles, search, selectedTagId, selectedLoteId, selectedStatus, selectedLocationId, tags]);
 
   // Tag counts calculation
   const tagCounts = useMemo(() => {
@@ -572,6 +584,24 @@ const ProfilesBoard: React.FC = () => {
               <option value={3}>Listo</option>
               <option value={4}>Trabajando</option>
               <option value={5}>En Pausa</option>
+            </select>
+          </div>
+
+          {/* Location filter */}
+          <div style={{ minWidth: '190px' }}>
+            <select
+              className="input-field"
+              value={selectedLocationId}
+              onChange={(e) => setSelectedLocationId(e.target.value === 'all' ? 'all' : e.target.value === 'none' ? 'none' : Number(e.target.value))}
+              style={{ width: '100%' }}
+            >
+              <option value="all">📍 Todas las Ubicaciones</option>
+              <option value="none">🚫 Sin Ubicación</option>
+              {locations.map((loc) => (
+                <option key={loc.id} value={loc.id}>
+                  {loc.location ? `${loc.location}, ${loc.state}` : loc.state}
+                </option>
+              ))}
             </select>
           </div>
         </div>

@@ -17,6 +17,8 @@ interface LocationItem {
   state: string;
   location: string;
   is_shared?: number;
+  location_proxy_id?: number | null;
+  location_proxy_alt_id?: number | null;
 }
 
 interface TagItem {
@@ -264,6 +266,17 @@ const EditProfile: React.FC = () => {
       const checked = (e.target as HTMLInputElement).checked;
       setFormData((prev) => ({ ...prev, [name]: checked }));
     } else {
+      if (name === 'location_id') {
+        const selectedId = Number(value);
+        const foundLoc = locations.find((l) => l.id === selectedId);
+        setFormData((prev) => ({
+          ...prev,
+          location_id: value,
+          location_proxy_id: foundLoc?.location_proxy_id ? String(foundLoc.location_proxy_id) : (value ? prev.location_proxy_id : ''),
+          location_proxy_alt_id: foundLoc?.location_proxy_alt_id ? String(foundLoc.location_proxy_alt_id) : (value ? prev.location_proxy_alt_id : ''),
+        }));
+        return;
+      }
       setFormData((prev) => ({ ...prev, [name]: value }));
     }
   };

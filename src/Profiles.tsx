@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { api } from './api';
 import { useLanguage } from './LanguageContext';
 import { useAuth } from './AuthContext';
-import { UserCheck, Plus, Search, Trash2, Edit2, X, Save, Link as LinkIcon, ListChecks, AlertCircle, Archive, Skull, Send, CheckCircle } from 'lucide-react';
+import { UserCheck, Plus, Search, Trash2, Edit2, X, Save, Link as LinkIcon, ListChecks, AlertCircle, Archive, Skull, Send, CheckCircle, MapPin } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 interface ProxyItem {
@@ -166,6 +166,8 @@ const Profiles: React.FC = () => {
   const [websites, setWebsites] = useState<WebsiteItem[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [locations, setLocations] = useState<{ id: number; location: string; state: string }[]>([]);
+  const [selectedLocationId, setSelectedLocationId] = useState<number | 'all' | 'none'>('all');
 
   // Quick Modal for adding a website account to a specific profile
   const [addingSiteToProfile, setAddingSiteToProfile] = useState<ProfileItem | null>(null);
@@ -199,7 +201,8 @@ const Profiles: React.FC = () => {
   const fetchProfiles = async (searchQuery = '') => {
     try {
       const res = await api.get(`/profiles${searchQuery ? `?search=${searchQuery}` : ''}`);
-      setProfiles(res.data);
+      const sorted = Array.isArray(res.data) ? [...res.data].sort((a, b) => b.id - a.id) : res.data;
+      setProfiles(sorted);
     } catch (err) {
       console.error(err);
     } finally {
@@ -219,15 +222,37 @@ const Profiles: React.FC = () => {
     }
   };
 
+  const fetchLocations = async () => {
+    try {
+      const res = await api.get('/locations');
+      setLocations(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
     fetchProfiles();
     fetchWebsites();
+    fetchLocations();
   }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     fetchProfiles(search);
   };
+
+  const filteredProfiles = useMemo(() => {
+    return profiles.filter((p) => {
+      if (selectedLocationId === 'none') {
+        return !p.location_id;
+      }
+      if (selectedLocationId !== 'all') {
+        return p.location_id === selectedLocationId;
+      }
+      return true;
+    });
+  }, [profiles, selectedLocationId]);
 
   const handleDelete = async (id: number) => {
     if (!window.confirm('¿Estás seguro de eliminar este perfil?')) return;
@@ -326,23 +351,46 @@ const Profiles: React.FC = () => {
         </div>
       )}
 
-      {/* Buscador */}
-      <form onSubmit={handleSearch} style={{ marginBottom: '1.5rem', display: 'flex', gap: '0.75rem' }}>
-        <div style={{ position: 'relative', width: '100%', maxWidth: '400px' }}>
-          <Search size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-          <input
-            type="text"
+      {/* Buscador y Filtros */}
+      <div style={{ marginBottom: '1.5rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+        <form onSubmit={handleSearch} style={{ display: 'flex', gap: '0.75rem', flex: '1 1 320px' }}>
+          <div style={{ position: 'relative', width: '100%', maxWidth: '400px' }}>
+            <Search size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+            <input
+              type="text"
+              className="input-field"
+              style={{ paddingLeft: '2.75rem' }}
+              placeholder="Buscar por nombre, correo..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <button type="submit" className="btn btn-secondary">
+            Buscar
+          </button>
+        </form>
+
+        {/* Filtro por Ubicación */}
+        <div style={{ minWidth: '220px' }}>
+          <select
             className="input-field"
-            style={{ paddingLeft: '2.75rem' }}
-            placeholder="Buscar por nombre, correo..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+            value={selectedLocationId}
+            onChange={(e) => {
+              const val = e.target.value === 'all' ? 'all' : e.target.value === 'none' ? 'none' : Number(e.target.value);
+              setSelectedLocationId(val);
+            }}
+            style={{ width: '100%' }}
+          >
+            <option value="all">📍 Todas las Ubicaciones</option>
+            <option value="none">🚫 Sin Ubicación</option>
+            {locations.map((loc) => (
+              <option key={loc.id} value={loc.id}>
+                {loc.location ? `${loc.location}, ${loc.state}` : loc.state}
+              </option>
+            ))}
+          </select>
         </div>
-        <button type="submit" className="btn btn-secondary">
-          Buscar
-        </button>
-      </form>
+      </div>
 
       {/* VISTA EN FORMATO DE TABLA */}
       {loading ? (
@@ -357,6 +405,15 @@ const Profiles: React.FC = () => {
           <Link to="/profiles/new" className="btn btn-primary">
             <Plus size={18} /> {t('new_profile')}
           </Link>
+        </div>
+      ) : filteredProfiles.length === 0 ? (
+        <div className="card" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+          <MapPin size={48} style={{ margin: '0 auto 1rem', opacity: 0.4 }} />
+          <h3>No se encontraron perfiles</h3>
+          <p style={{ margin: '0.5rem 0 1.5rem' }}>No hay perfiles que coincidan con la ubicación seleccionada.</p>
+          <button type="button" onClick={() => setSelectedLocationId('all')} className="btn btn-secondary">
+            Mostrar todas las ubicaciones
+          </button>
         </div>
       ) : (
         <div className="card" style={{ padding: 0, overflowX: 'auto', width: '100%' }}>
@@ -377,7 +434,7 @@ const Profiles: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {profiles.map((p) => {
+              {filteredProfiles.map((p) => {
                 const tagColor = p.tag?.color || '#3b82f6';
                 return (
                   <tr key={p.id} style={{ borderBottom: '1px solid var(--border)' }}>
