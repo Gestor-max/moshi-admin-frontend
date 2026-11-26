@@ -27,6 +27,7 @@ import {
   Globe,
   History,
   Calendar,
+  Eye,
 } from 'lucide-react';
 
 interface TagItem {
@@ -161,6 +162,13 @@ const getStatusBadge = (status?: number) => {
         color: '#ef4444',
         border: 'rgba(239, 68, 68, 0.35)',
       };
+    case 6:
+      return {
+        label: 'En Observación',
+        bg: 'rgba(249, 115, 22, 0.15)',
+        color: '#ea580c',
+        border: 'rgba(249, 115, 22, 0.35)',
+      };
     default:
       return {
         label: 'Trabajando',
@@ -194,7 +202,11 @@ const getProfileTags = (p: ProfileItem, allTags: TagItem[]): TagItem[] => {
   return [];
 };
 
-const ProfilesBoard: React.FC = () => {
+interface ProfilesBoardProps {
+  isObservation?: boolean;
+}
+
+const ProfilesBoard: React.FC<ProfilesBoardProps> = ({ isObservation = false }) => {
   const navigate = useNavigate();
   const [profiles, setProfiles] = useState<ProfileItem[]>([]);
   const [tags, setTags] = useState<TagItem[]>([]);
@@ -266,8 +278,11 @@ const ProfilesBoard: React.FC = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
+      const profilesUrl = isObservation
+        ? '/profiles?observation=true&archived=false'
+        : '/profiles?archived=false';
       const [resProfiles, resTags, resLotes, resLocations] = await Promise.all([
-        api.get('/profiles?archived=false'),
+        api.get(profilesUrl),
         api.get('/tags'),
         api.get('/lotes'),
         api.get('/locations'),
@@ -286,7 +301,7 @@ const ProfilesBoard: React.FC = () => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [isObservation]);
 
   // Assign a tag to profile (Many-to-Many)
   const handleAddTagToProfile = async (profileId: number, tagId: number) => {
@@ -425,6 +440,13 @@ const ProfilesBoard: React.FC = () => {
   // Filtered profiles
   const filteredProfiles = useMemo(() => {
     return profiles.filter((p) => {
+      // Regla de vista de observación vs tablero estándar
+      if (isObservation) {
+        if (Number(p.status) !== 6) return false;
+      } else {
+        if (Number(p.status) === 6) return false;
+      }
+
       // Search filter: name, lastname, gmail, profile_email
       if (search.trim()) {
         const query = search.toLowerCase();
@@ -463,31 +485,43 @@ const ProfilesBoard: React.FC = () => {
 
       return true;
     }).sort((a, b) => b.id - a.id);
-  }, [profiles, search, selectedTagId, selectedLoteId, selectedStatus, selectedLocationId, tags]);
+  }, [profiles, search, selectedTagId, selectedLoteId, selectedStatus, selectedLocationId, tags, isObservation]);
 
   // Tag counts calculation
   const tagCounts = useMemo(() => {
+    const relevantProfiles = profiles.filter((p) => isObservation ? Number(p.status) === 6 : Number(p.status) !== 6);
     const counts: Record<number | string, number> = {
-      all: profiles.length,
-      none: profiles.filter((p) => getProfileTags(p, tags).length === 0).length,
+      all: relevantProfiles.length,
+      none: relevantProfiles.filter((p) => getProfileTags(p, tags).length === 0).length,
     };
     tags.forEach((t) => {
-      counts[t.id] = profiles.filter((p) => getProfileTags(p, tags).some((pt) => pt.id === t.id)).length;
+      counts[t.id] = relevantProfiles.filter((p) => getProfileTags(p, tags).some((pt) => pt.id === t.id)).length;
     });
     return counts;
-  }, [profiles, tags]);
+  }, [profiles, tags, isObservation]);
 
   return (
     <div style={{ padding: '1.5rem 2rem', width: '100%', boxSizing: 'border-box' }}>
       {/* Header */}
-      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <h1 style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '1.75rem', fontWeight: 700, margin: 0, color: 'var(--text-main)' }}>
-            <LayoutGrid style={{ color: 'var(--primary)' }} size={28} />
-            Tablero de Perfiles
+            {isObservation ? (
+              <>
+                <Eye style={{ color: '#f97316' }} size={28} />
+                Perfiles en Observación
+              </>
+            ) : (
+              <>
+                <LayoutGrid style={{ color: 'var(--primary)' }} size={28} />
+                Tablero de Perfiles
+              </>
+            )}
           </h1>
           <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-            Vista interactiva en tarjetas. Filtra y asigna etiquetas directamente a tus perfiles.
+            {isObservation
+              ? 'Supervisa y gestiona los perfiles que se encuentran en estado de observación.'
+              : 'Vista interactiva en tarjetas. Filtra y asigna etiquetas directamente a tus perfiles.'}
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -571,21 +605,23 @@ const ProfilesBoard: React.FC = () => {
           </div>
 
           {/* Status filter */}
-          <div style={{ minWidth: '160px' }}>
-            <select
-              className="input-field"
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value === 'all' ? 'all' : Number(e.target.value))}
-              style={{ width: '100%' }}
-            >
-              <option value="all">🚦 Todos los Estados</option>
-              <option value={1}>Nuevo</option>
-              <option value={2}>En Preparación</option>
-              <option value={3}>Listo</option>
-              <option value={4}>Trabajando</option>
-              <option value={5}>En Pausa</option>
-            </select>
-          </div>
+          {!isObservation && (
+            <div style={{ minWidth: '160px' }}>
+              <select
+                className="input-field"
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+                style={{ width: '100%' }}
+              >
+                <option value="all">🚦 Todos los Estados</option>
+                <option value={1}>Nuevo</option>
+                <option value={2}>En Preparación</option>
+                <option value={3}>Listo</option>
+                <option value={4}>Trabajando</option>
+                <option value={5}>En Pausa</option>
+              </select>
+            </div>
+          )}
 
           {/* Location filter */}
           <div style={{ minWidth: '190px' }}>
@@ -676,7 +712,7 @@ const ProfilesBoard: React.FC = () => {
           </button>
 
           {/* Individual Tags */}
-          {tags.filter((t) => !t.is_system).map((tag) => {
+          {tags.map((tag) => {
             const isSelected = selectedTagId === tag.id;
             const count = tagCounts[tag.id] || 0;
             const tagColor = tag.color || '#3b82f6';
@@ -787,10 +823,18 @@ const ProfilesBoard: React.FC = () => {
         <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-muted)' }}>Cargando tablero de perfiles...</div>
       ) : filteredProfiles.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: '3.5rem 1.5rem' }}>
-          <LayoutGrid size={48} style={{ color: 'var(--text-muted)', margin: '0 auto 1rem auto', opacity: 0.4 }} />
-          <h3 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-main)' }}>No se encontraron perfiles</h3>
+          {isObservation ? (
+            <Eye size={48} style={{ color: '#f97316', margin: '0 auto 1rem auto', opacity: 0.5 }} />
+          ) : (
+            <LayoutGrid size={48} style={{ color: 'var(--text-muted)', margin: '0 auto 1rem auto', opacity: 0.4 }} />
+          )}
+          <h3 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-main)' }}>
+            {isObservation ? 'No hay perfiles en observación' : 'No se encontraron perfiles'}
+          </h3>
           <p style={{ color: 'var(--text-muted)', margin: '0 0 1.5rem 0', fontSize: '0.9rem' }}>
-            Intenta cambiar los filtros seleccionados o el término de búsqueda.
+            {isObservation
+              ? 'Actualmente no hay ningún perfil con estado "En Observación".'
+              : 'Intenta cambiar los filtros seleccionados o el término de búsqueda.'}
           </p>
           <button
             onClick={() => {
@@ -808,8 +852,8 @@ const ProfilesBoard: React.FC = () => {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(330px, 1fr))',
-            gap: '1.25rem',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(310px, 1fr))',
+            gap: '0.85rem',
           }}
         >
           {filteredProfiles.map((p) => {
@@ -835,8 +879,8 @@ const ProfilesBoard: React.FC = () => {
                 style={{
                   display: 'flex',
                   flexDirection: 'column',
-                  padding: '1.25rem',
-                  borderRadius: '0.75rem',
+                  padding: '0.75rem 0.85rem',
+                  borderRadius: '0.65rem',
                   border: '1px solid var(--border-color)',
                   position: 'relative',
                   transition: 'transform 0.2s ease, box-shadow 0.2s ease',
@@ -844,13 +888,13 @@ const ProfilesBoard: React.FC = () => {
                 }}
               >
                 {/* Card Top: ID, Status, Avatar, Full Name */}
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.85rem', marginBottom: '1rem' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem', marginBottom: '0.45rem' }}>
                   {/* Avatar */}
                   <div
                     onClick={() => handleOpenOffcanvas(p)}
                     style={{
-                      width: '46px',
-                      height: '46px',
+                      width: '38px',
+                      height: '38px',
                       borderRadius: '50%',
                       background: 'rgba(249, 115, 22, 0.15)',
                       color: 'var(--primary)',
@@ -858,7 +902,7 @@ const ProfilesBoard: React.FC = () => {
                       alignItems: 'center',
                       justifyContent: 'center',
                       fontWeight: 700,
-                      fontSize: '1.1rem',
+                      fontSize: '0.95rem',
                       flexShrink: 0,
                       overflow: 'hidden',
                       border: '2px solid rgba(249, 115, 22, 0.2)',
@@ -874,37 +918,37 @@ const ProfilesBoard: React.FC = () => {
                   </div>
 
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem', marginBottom: '0.2rem', flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.35rem', marginBottom: '0.15rem', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)' }}>
                         #{p.id}
                       </span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                         {loteItem && (
                           <span
                             style={{
-                              fontSize: '0.68rem',
+                              fontSize: '0.66rem',
                               fontWeight: 600,
-                              padding: '0.12rem 0.45rem',
+                              padding: '0.1rem 0.4rem',
                               borderRadius: '9999px',
                               background: 'rgba(249, 115, 22, 0.12)',
                               color: 'var(--primary)',
                               border: '1px solid rgba(249, 115, 22, 0.3)',
                               display: 'inline-flex',
                               alignItems: 'center',
-                              gap: '0.25rem',
+                              gap: '0.2rem',
                             }}
                             title={`Lote: ${loteItem.name}${loteItem.proveedor ? ` (${loteItem.proveedor})` : ''}`}
                           >
-                            <Boxes size={11} />
+                            <Boxes size={10} />
                             <span>{loteItem.name}</span>
                           </span>
                         )}
                         {/* Status badge */}
                         <span
                           style={{
-                            fontSize: '0.7rem',
+                            fontSize: '0.68rem',
                             fontWeight: 700,
-                            padding: '0.15rem 0.5rem',
+                            padding: '0.1rem 0.45rem',
                             borderRadius: '9999px',
                             background: statusBadge.bg,
                             color: statusBadge.color,
@@ -927,7 +971,7 @@ const ProfilesBoard: React.FC = () => {
                         width: 'auto',
                         cursor: 'pointer',
                         textAlign: 'left',
-                        fontSize: '1.05rem',
+                        fontSize: '0.95rem',
                         fontWeight: 700,
                         color: 'var(--text-main)',
                         textDecoration: 'none',
@@ -947,11 +991,11 @@ const ProfilesBoard: React.FC = () => {
                 </div>
 
                 {/* Card Body: Emails */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '1rem', background: 'rgba(0,0,0,0.02)', padding: '0.65rem 0.75rem', borderRadius: '0.5rem', border: '1px solid rgba(0,0,0,0.04)' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', marginBottom: '0.45rem', background: 'rgba(0,0,0,0.02)', padding: '0.35rem 0.55rem', borderRadius: '0.45rem', border: '1px solid rgba(0,0,0,0.04)' }}>
                   {/* Gmail */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', minWidth: 0 }}>
-                      <Mail size={14} style={{ color: '#ea4335', flexShrink: 0 }} />
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', minWidth: 0 }}>
+                      <Mail size={13} style={{ color: '#ea4335', flexShrink: 0 }} />
                       <span
                         style={{
                           color: p.gmail ? 'var(--text-main)' : 'var(--text-muted)',
@@ -971,16 +1015,16 @@ const ProfilesBoard: React.FC = () => {
                         style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '0.1rem', color: copiedEmail === p.gmail ? '#10b981' : 'var(--text-muted)' }}
                         title="Copiar Gmail"
                       >
-                        {copiedEmail === p.gmail ? <Check size={13} /> : <Copy size={13} />}
+                        {copiedEmail === p.gmail ? <Check size={12} /> : <Copy size={12} />}
                       </button>
                     )}
                   </div>
 
                   {/* Profile Email if different */}
                   {p.profile_email && p.profile_email !== p.gmail && (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', minWidth: 0 }}>
-                        <Mail size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.76rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', minWidth: 0 }}>
+                        <Mail size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
                         <span
                           style={{
                             color: 'var(--text-muted)',
@@ -999,17 +1043,17 @@ const ProfilesBoard: React.FC = () => {
                         style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '0.1rem', color: copiedEmail === p.profile_email ? '#10b981' : 'var(--text-muted)' }}
                         title="Copiar Correo Perfil"
                       >
-                        {copiedEmail === p.profile_email ? <Check size={13} /> : <Copy size={13} />}
+                        {copiedEmail === p.profile_email ? <Check size={12} /> : <Copy size={12} />}
                       </button>
                     </div>
                   )}
                 </div>
 
                 {/* Proxy & Location */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', marginBottom: '1rem', fontSize: '0.8rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', marginBottom: '0.45rem', fontSize: '0.76rem' }}>
                   {/* Proxy */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <Server size={14} style={{ color: '#0ea5e9', flexShrink: 0 }} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <Server size={13} style={{ color: '#0ea5e9', flexShrink: 0 }} />
                     <span style={{ color: 'var(--text-muted)' }}>Proxy:</span>
                     {p.proxy ? (
                       <span style={{ fontFamily: 'monospace', fontWeight: 600, color: 'var(--text-main)' }}>
@@ -1021,8 +1065,8 @@ const ProfilesBoard: React.FC = () => {
                   </div>
 
                   {/* Location */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <MapPin size={14} style={{ color: '#ec4899', flexShrink: 0 }} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <MapPin size={13} style={{ color: '#ec4899', flexShrink: 0 }} />
                     <span style={{ color: 'var(--text-muted)' }}>Ubicación:</span>
                     {p.location ? (
                       <span style={{ fontWeight: 500, color: 'var(--text-main)' }}>
@@ -1037,36 +1081,36 @@ const ProfilesBoard: React.FC = () => {
                 {/* Panel de Actividades por Plataforma */}
                 <div
                   style={{
-                    padding: '0.55rem 0.65rem',
-                    borderRadius: '0.5rem',
+                    padding: '0.35rem 0.55rem',
+                    borderRadius: '0.45rem',
                     background: 'rgba(0,0,0,0.02)',
                     border: '1px solid var(--border-color)',
-                    marginBottom: '0.75rem',
+                    marginBottom: '0.45rem',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
-                    <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
+                    <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
                       ⚡ Actividades ({totalActivities})
                     </span>
                     {totalActivities === 0 && (
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>Sin tareas</span>
+                      <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>Sin tareas</span>
                     )}
                   </div>
 
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', alignItems: 'center' }}>
                     <span
                       className="badge"
                       style={{
                         background: '#3b82f615',
                         color: '#3b82f6',
                         border: '1px solid #3b82f630',
-                        fontSize: '0.73rem',
-                        padding: '0.15rem 0.45rem',
+                        fontSize: '0.7rem',
+                        padding: '0.1rem 0.35rem',
                         borderRadius: '4px',
                         fontWeight: 600,
                         display: 'inline-flex',
                         alignItems: 'center',
-                        gap: '0.25rem',
+                        gap: '0.2rem',
                       }}
                       title="Búsquedas Google"
                     >
@@ -1080,13 +1124,13 @@ const ProfilesBoard: React.FC = () => {
                         background: '#ef444415',
                         color: '#ef4444',
                         border: '1px solid #ef444430',
-                        fontSize: '0.73rem',
-                        padding: '0.15rem 0.45rem',
+                        fontSize: '0.7rem',
+                        padding: '0.1rem 0.35rem',
                         borderRadius: '4px',
                         fontWeight: 600,
                         display: 'inline-flex',
                         alignItems: 'center',
-                        gap: '0.25rem',
+                        gap: '0.2rem',
                       }}
                       title="YouTube"
                     >
@@ -1100,13 +1144,13 @@ const ProfilesBoard: React.FC = () => {
                         background: '#10b98115',
                         color: '#10b981',
                         border: '1px solid #10b98130',
-                        fontSize: '0.73rem',
-                        padding: '0.15rem 0.45rem',
+                        fontSize: '0.7rem',
+                        padding: '0.1rem 0.35rem',
                         borderRadius: '4px',
                         fontWeight: 600,
                         display: 'inline-flex',
                         alignItems: 'center',
-                        gap: '0.25rem',
+                        gap: '0.2rem',
                       }}
                       title="Google Maps"
                     >
@@ -1120,13 +1164,13 @@ const ProfilesBoard: React.FC = () => {
                         background: 'rgba(249, 115, 22, 0.12)',
                         color: '#f97316',
                         border: '1px solid rgba(249, 115, 22, 0.3)',
-                        fontSize: '0.73rem',
-                        padding: '0.15rem 0.45rem',
+                        fontSize: '0.7rem',
+                        padding: '0.1rem 0.35rem',
                         borderRadius: '4px',
                         fontWeight: 600,
                         display: 'inline-flex',
                         alignItems: 'center',
-                        gap: '0.25rem',
+                        gap: '0.2rem',
                       }}
                       title="Sitios Web (Browser)"
                     >
@@ -1141,13 +1185,13 @@ const ProfilesBoard: React.FC = () => {
                           background: 'rgba(185, 43, 39, 0.12)',
                           color: '#b92b27',
                           border: '1px solid rgba(185, 43, 39, 0.3)',
-                          fontSize: '0.73rem',
-                          padding: '0.15rem 0.45rem',
+                          fontSize: '0.7rem',
+                          padding: '0.1rem 0.35rem',
                           borderRadius: '4px',
                           fontWeight: 600,
                           display: 'inline-flex',
                           alignItems: 'center',
-                          gap: '0.25rem',
+                          gap: '0.2rem',
                         }}
                         title="Quora"
                       >
@@ -1163,13 +1207,13 @@ const ProfilesBoard: React.FC = () => {
                           background: 'rgba(30, 41, 59, 0.12)',
                           color: 'var(--text-main)',
                           border: '1px solid var(--border-color)',
-                          fontSize: '0.73rem',
-                          padding: '0.15rem 0.45rem',
+                          fontSize: '0.7rem',
+                          padding: '0.1rem 0.35rem',
                           borderRadius: '4px',
                           fontWeight: 600,
                           display: 'inline-flex',
                           alignItems: 'center',
-                          gap: '0.25rem',
+                          gap: '0.2rem',
                         }}
                         title="Medium"
                       >
@@ -1184,27 +1228,27 @@ const ProfilesBoard: React.FC = () => {
                 <div
                   style={{
                     marginTop: 'auto',
-                    marginBottom: '0.85rem',
-                    padding: '0.65rem 0.75rem',
-                    borderRadius: '0.5rem',
+                    marginBottom: '0.45rem',
+                    padding: '0.35rem 0.55rem',
+                    borderRadius: '0.45rem',
                     background: 'rgba(0,0,0,0.02)',
                     border: '1px solid var(--border-color)',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.45rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
-                      <TagIcon size={12} style={{ color: 'var(--primary)' }} />
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                      <TagIcon size={11} style={{ color: 'var(--primary)' }} />
                       <span>Etiquetas ({profileTags.length})</span>
                     </div>
                     {isUpdatingThis && (
-                      <span style={{ fontSize: '0.68rem', color: '#10b981', display: 'flex', alignItems: 'center', gap: '0.2rem', fontWeight: 600 }}>
-                        <CheckCircle2 size={11} /> Guardado
+                      <span style={{ fontSize: '0.66rem', color: '#10b981', display: 'flex', alignItems: 'center', gap: '0.2rem', fontWeight: 600 }}>
+                        <CheckCircle2 size={10} /> Guardado
                       </span>
                     )}
                   </div>
 
                   {/* Tags list INLINE + Selector para agregar */}
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', alignItems: 'center' }}>
                     {profileTags.map((tag) => {
                       const tagColor = tag.color || '#3b82f6';
                       return (
@@ -1213,10 +1257,10 @@ const ProfilesBoard: React.FC = () => {
                           style={{
                             display: 'inline-flex',
                             alignItems: 'center',
-                            gap: '0.3rem',
-                            padding: '0.2rem 0.55rem',
+                            gap: '0.25rem',
+                            padding: '0.12rem 0.45rem',
                             borderRadius: '9999px',
-                            fontSize: '0.76rem',
+                            fontSize: '0.72rem',
                             fontWeight: 600,
                             background: `${tagColor}18`,
                             color: tagColor,
@@ -1224,7 +1268,7 @@ const ProfilesBoard: React.FC = () => {
                             lineHeight: 1.2,
                           }}
                         >
-                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: tagColor }} />
+                          <span style={{ width: 5, height: 5, borderRadius: '50%', background: tagColor }} />
                           <span>{tag.name}</span>
                           <button
                             type="button"
@@ -1235,7 +1279,7 @@ const ProfilesBoard: React.FC = () => {
                               cursor: 'pointer',
                               color: tagColor,
                               padding: 0,
-                              marginLeft: '0.15rem',
+                              marginLeft: '0.1rem',
                               display: 'inline-flex',
                               alignItems: 'center',
                               justifyContent: 'center',
@@ -1243,7 +1287,7 @@ const ProfilesBoard: React.FC = () => {
                             }}
                             title={`Quitar etiqueta "${tag.name}"`}
                           >
-                            <X size={12} />
+                            <X size={11} />
                           </button>
                         </span>
                       );
@@ -1259,8 +1303,8 @@ const ProfilesBoard: React.FC = () => {
                           }
                         }}
                         style={{
-                          padding: '0.18rem 0.5rem',
-                          fontSize: '0.75rem',
+                          padding: '0.12rem 0.4rem',
+                          fontSize: '0.72rem',
                           borderRadius: '9999px',
                           border: '1px dashed var(--border-color)',
                           background: 'var(--card-bg)',
@@ -1278,7 +1322,7 @@ const ProfilesBoard: React.FC = () => {
                         ))}
                       </select>
                     ) : profileTags.length === 0 ? (
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
                         Sin etiquetas asignadas
                       </span>
                     ) : null}
@@ -1286,7 +1330,7 @@ const ProfilesBoard: React.FC = () => {
                 </div>
 
                 {/* Actions Footer */}
-                <div style={{ display: 'flex', gap: '0.5rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-color)' }}>
+                <div style={{ display: 'flex', gap: '0.4rem', paddingTop: '0.45rem', borderTop: '1px solid var(--border-color)' }}>
                   <Link
                     to={`/profiles/${p.id}/edit`}
                     className="btn-secondary"
@@ -1295,14 +1339,14 @@ const ProfilesBoard: React.FC = () => {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      gap: '0.35rem',
-                      padding: '0.45rem',
-                      fontSize: '0.8rem',
+                      gap: '0.3rem',
+                      padding: '0.35rem 0.5rem',
+                      fontSize: '0.78rem',
                       textDecoration: 'none',
                       borderRadius: '0.375rem',
                     }}
                   >
-                    <Edit2 size={14} />
+                    <Edit2 size={13} />
                     <span>Editar</span>
                   </Link>
 
@@ -1314,24 +1358,24 @@ const ProfilesBoard: React.FC = () => {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      gap: '0.35rem',
-                      padding: '0.45rem',
-                      fontSize: '0.8rem',
+                      gap: '0.3rem',
+                      padding: '0.35rem 0.5rem',
+                      fontSize: '0.78rem',
                       textDecoration: 'none',
                       borderRadius: '0.375rem',
                     }}
                     title="Ver actividades programadas"
                   >
-                    <ListChecks size={14} />
+                    <ListChecks size={13} />
                     <span>Actividades</span>
                     {totalActivities > 0 && (
                       <span
                         style={{
                           background: 'rgba(249, 115, 22, 0.15)',
                           color: 'var(--primary)',
-                          padding: '0.1rem 0.35rem',
+                          padding: '0.08rem 0.3rem',
                           borderRadius: '9999px',
-                          fontSize: '0.7rem',
+                          fontSize: '0.68rem',
                           fontWeight: 700,
                         }}
                       >

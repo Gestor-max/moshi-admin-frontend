@@ -8,6 +8,7 @@ export const translations = {
     nav_dashboard: "Panel Principal",
     nav_profiles: "Perfiles",
     nav_profiles_board: "Tablero Perfiles",
+    nav_observation_profiles: "Perfiles en Observación",
     nav_archived_profiles: "Perfiles Archivados",
     nav_zombie_profiles: "Cuentas Zombie",
     nav_tags: "Etiquetas / Tags",
@@ -20,6 +21,7 @@ export const translations = {
     nav_websites: "Sitios Web",
     nav_linked: "Vínculos",
     nav_automations: "Automatizaciones",
+    nav_catalogs: "Catálogos",
     logout: "Cerrar Sesión",
 
     // Locations
@@ -164,6 +166,7 @@ export const translations = {
     nav_dashboard: "Dashboard",
     nav_profiles: "Profiles",
     nav_profiles_board: "Profiles Board",
+    nav_observation_profiles: "Observation Profiles",
     nav_archived_profiles: "Archived Profiles",
     nav_zombie_profiles: "Zombie Accounts",
     nav_tags: "Tags",
@@ -176,6 +179,7 @@ export const translations = {
     nav_websites: "Websites",
     nav_linked: "Linked Profiles",
     nav_automations: "Automations",
+    nav_catalogs: "Catalogs",
     logout: "Log Out",
 
     // Locations

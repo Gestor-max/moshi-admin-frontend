@@ -8,6 +8,7 @@ import Register from './Register';
 import Dashboard from './Dashboard';
 import Profiles from './Profiles';
 import ProfilesBoard from './ProfilesBoard';
+import ObservationProfiles from './ObservationProfiles';
 import ArchivedProfiles from './ArchivedProfiles';
 import ZombieProfiles from './ZombieProfiles';
 import Tags from './Tags';
@@ -64,6 +65,7 @@ function App() {
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/profiles" element={<ProtectedRoute><Profiles /></ProtectedRoute>} />
             <Route path="/profiles/board" element={<ProtectedRoute><ProfilesBoard /></ProtectedRoute>} />
+            <Route path="/profiles/observation" element={<ProtectedRoute><ObservationProfiles /></ProtectedRoute>} />
             <Route path="/profiles/archived" element={<ProtectedRoute><ArchivedProfiles /></ProtectedRoute>} />
             <Route path="/profiles/zombie" element={<ProtectedRoute><ZombieProfiles /></ProtectedRoute>} />
             <Route path="/tags" element={<ProtectedRoute><Tags /></ProtectedRoute>} />

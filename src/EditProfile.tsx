@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from './api';
 import { useLanguage } from './LanguageContext';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { UserCheck, Save, ArrowLeft, Briefcase, GraduationCap, MapPin, Key, User, Eye, EyeOff, ShieldCheck, Wand2, Sparkles , RefreshCw } from 'lucide-react';
+import { UserCheck, Save, ArrowLeft, Briefcase, GraduationCap, MapPin, Key, User, Eye, EyeOff, ShieldCheck, Wand2, Sparkles, RefreshCw, FileText } from 'lucide-react';
 import { generateSecurePassword, generateRecoveryEmail, generateRandomRecoveryEmail, DEFAULT_RECOVERY_DOMAIN } from './profileGenerators';
 
 interface ProxyItem {
@@ -34,7 +34,7 @@ interface LoteItem {
   is_shared?: number;
 }
 
-type TabType = 'basica' | 'credenciales' | 'empleo' | 'educacion' | 'ubicacion';
+type TabType = 'principal' | 'adicional' | 'empleo' | 'educacion' | 'ubicacion';
 
 const EditProfile: React.FC = () => {
   const { t } = useLanguage();
@@ -48,7 +48,7 @@ const EditProfile: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<TabType>('basica');
+  const [activeTab, setActiveTab] = useState<TabType>('principal');
   const [showPasswords, setShowPasswords] = useState<{ [key: string]: boolean }>({});
 
   const togglePasswordVisibility = (field: string) => {
@@ -285,7 +285,7 @@ const EditProfile: React.FC = () => {
     e.preventDefault();
     if (!formData.name.trim() || !formData.lastname.trim()) {
       setError('Nombre y Apellido son campos obligatorios.');
-      setActiveTab('basica');
+      setActiveTab('principal');
       return;
     }
 
@@ -333,7 +333,7 @@ const EditProfile: React.FC = () => {
 
   return (
     <div className="dashboard">
-      <div style={{ maxWidth: '850px', margin: '0 auto', paddingBottom: '2rem' }}>
+      <div style={{ width: '100%', margin: '0 auto', paddingBottom: '2rem' }}>
         <Link to="/profiles" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', textDecoration: 'none', marginBottom: '1.25rem' }}>
           <ArrowLeft size={18} /> Volver a Perfiles
         </Link>
@@ -356,24 +356,24 @@ const EditProfile: React.FC = () => {
         <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '1px solid var(--border)', marginBottom: '1.5rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
           <button
             type="button"
-            className={`btn ${activeTab === 'basica' ? 'btn-primary' : 'btn-secondary'}`}
-            style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}
-            onClick={() => setActiveTab('basica')}
+            className={`btn ${activeTab === 'principal' ? 'btn-primary' : 'btn-secondary'}`}
+            style={{ padding: '0.5rem 1rem', fontSize: '0.875rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+            onClick={() => setActiveTab('principal')}
           >
-            <User size={16} /> {t('tab_basic')}
+            <User size={16} /> Principal (Básica & Credenciales)
           </button>
           <button
             type="button"
-            className={`btn ${activeTab === 'credenciales' ? 'btn-primary' : 'btn-secondary'}`}
-            style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}
-            onClick={() => setActiveTab('credenciales')}
+            className={`btn ${activeTab === 'adicional' ? 'btn-primary' : 'btn-secondary'}`}
+            style={{ padding: '0.5rem 1rem', fontSize: '0.875rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+            onClick={() => setActiveTab('adicional')}
           >
-            <Key size={16} /> {t('tab_credentials')}
+            <FileText size={16} /> Información Adicional
           </button>
           <button
             type="button"
             className={`btn ${activeTab === 'empleo' ? 'btn-primary' : 'btn-secondary'}`}
-            style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}
+            style={{ padding: '0.5rem 1rem', fontSize: '0.875rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
             onClick={() => setActiveTab('empleo')}
           >
             <Briefcase size={16} /> {t('tab_employment')}
@@ -381,7 +381,7 @@ const EditProfile: React.FC = () => {
           <button
             type="button"
             className={`btn ${activeTab === 'educacion' ? 'btn-primary' : 'btn-secondary'}`}
-            style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}
+            style={{ padding: '0.5rem 1rem', fontSize: '0.875rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
             onClick={() => setActiveTab('educacion')}
           >
             <GraduationCap size={16} /> {t('tab_education')}
@@ -389,7 +389,7 @@ const EditProfile: React.FC = () => {
           <button
             type="button"
             className={`btn ${activeTab === 'ubicacion' ? 'btn-primary' : 'btn-secondary'}`}
-            style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}
+            style={{ padding: '0.5rem 1rem', fontSize: '0.875rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
             onClick={() => setActiveTab('ubicacion')}
           >
             <MapPin size={16} /> {t('tab_location')}
@@ -397,139 +397,104 @@ const EditProfile: React.FC = () => {
         </div>
 
         <form onSubmit={handleSubmit}>
-          {/* TAB 1: INFORMACIÓN BÁSICA */}
-          {activeTab === 'basica' && (
-            <div className="card" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
-              <div className="form-group">
-                <label>Nombre <span style={{ color: 'var(--error)' }}>*</span></label>
-                <input type="text" className="input-field" name="name" value={formData.name} onChange={handleChange} placeholder="ej. Mario" required />
-              </div>
+          {/* TAB 1: PRINCIPAL (INFORMACIÓN BÁSICA Y CONECTIVIDAD + CREDENCIALES) */}
+          {activeTab === 'principal' && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(520px, 1fr))', gap: '1.5rem', alignItems: 'start' }}>
+              
+              {/* COLUMNA 1: INFORMACIÓN BÁSICA & CONECTIVIDAD */}
+              <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', padding: '1.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem', marginBottom: '0.25rem' }}>
+                  <User size={18} style={{ color: 'var(--primary)' }} />
+                  <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 600 }}>Información Básica & Conectividad</h3>
+                </div>
 
-              <div className="form-group">
-                <label>Apellido <span style={{ color: 'var(--error)' }}>*</span></label>
-                <input type="text" className="input-field" name="lastname" value={formData.lastname} onChange={handleChange} placeholder="ej. Mosca" required />
-              </div>
+                {/* Fila 1: Nombre, Apellido, Ubicación Básica */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+                  <div className="form-group">
+                    <label>Nombre <span style={{ color: 'var(--error)' }}>*</span></label>
+                    <input type="text" className="input-field" name="name" value={formData.name} onChange={handleChange} placeholder="ej. Mario" required />
+                  </div>
 
-              <div className="form-group">
-                <label>Username</label>
-                <input type="text" className="input-field" name="username" value={formData.username} onChange={handleChange} placeholder="ej. mariomosca" />
-              </div>
+                  <div className="form-group">
+                    <label>Apellido <span style={{ color: 'var(--error)' }}>*</span></label>
+                    <input type="text" className="input-field" name="lastname" value={formData.lastname} onChange={handleChange} placeholder="ej. Mosca" required />
+                  </div>
 
-              <div className="form-group">
-                <label>Website</label>
-                <input type="text" className="input-field" name="website" value={formData.website} onChange={handleChange} placeholder="https://mariomosca.com" />
-              </div>
+                  <div className="form-group">
+                    <label>Ubicación Básica</label>
+                    <input type="text" className="input-field" name="location_basic" value={formData.location_basic} onChange={handleChange} placeholder="ej. Austin, TX" />
+                  </div>
+                </div>
 
-              <div className="form-group">
-                <label>Pronouns (Pronombres)</label>
-                <select name="pronouns" className="input-field" value={formData.pronouns} onChange={handleChange}>
-                  <option value="Don't specify">Don't specify</option>
-                  <option value="they/them">they/them</option>
-                  <option value="she/her">she/her</option>
-                  <option value="he/him">he/him</option>
-                </select>
-              </div>
+                {/* Fila 2: Proxy Asociado, Proxy 2 Secundario */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div className="form-group">
+                    <label>Proxy Asociado (Opcional)</label>
+                    <select name="proxy_id" className="input-field" value={formData.proxy_id} onChange={handleChange}>
+                      <option value="">-- Sin Proxy --</option>
+                      {proxies.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          Proxy #{p.id} ({p.ip}:{p.port})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-              <div className="form-group">
-                <label>Company (Empresa Básica)</label>
-                <input type="text" className="input-field" name="company_basic" value={formData.company_basic} onChange={handleChange} placeholder="ej. Coca Cola" />
-              </div>
+                  <div className="form-group">
+                    <label>Proxy 2 Secundario (Opcional)</label>
+                    <select name="proxy2_id" className="input-field" value={formData.proxy2_id} onChange={handleChange}>
+                      <option value="">-- Sin Proxy 2 --</option>
+                      {proxies.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          Proxy #{p.id} ({p.ip}:{p.port})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
 
-              <div className="form-group">
-                <label>Location (Ubicación Básica)</label>
-                <input type="text" className="input-field" name="location_basic" value={formData.location_basic} onChange={handleChange} placeholder="ej. Austin, TX" />
-              </div>
+                {/* Fila 3: Ubicación Asociada, Location Proxy, Location Proxy Alternativa */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+                  <div className="form-group">
+                    <label>Ubicación Asociada (Opcional)</label>
+                    <select name="location_id" className="input-field" value={formData.location_id} onChange={handleChange}>
+                      <option value="">-- Sin Ubicación --</option>
+                      {locations.map((loc) => (
+                        <option key={loc.id} value={loc.id}>
+                          {loc.location} ({loc.state}) {loc.is_shared === 1 ? '🌐' : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-              <div className="form-group">
-                <label>Profile Credential (Incluye Ubicación)</label>
-                <input type="text" className="input-field" name="profile_credential" value={formData.profile_credential} onChange={handleChange} placeholder="ej. Full Stack Programmer at Coca Cola" />
-              </div>
+                  <div className="form-group">
+                    <label>🛰️ Location Proxy (Opcional)</label>
+                    <select name="location_proxy_id" className="input-field" value={formData.location_proxy_id} onChange={handleChange}>
+                      <option value="">-- Sin Location Proxy --</option>
+                      {locations.map((loc) => (
+                        <option key={loc.id} value={loc.id}>
+                          {loc.location} ({loc.state}) {loc.is_shared === 1 ? '🌐' : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-              <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                <label>Topic About You (Temas / Intereses)</label>
-                <input type="text" className="input-field" name="topic_about_you" value={formData.topic_about_you} onChange={handleChange} placeholder="ej. Live Music, Street Tacos, Hiking, Paddleboarding" />
-              </div>
+                  <div className="form-group">
+                    <label>🔄 Location Proxy Alternativa (Opcional)</label>
+                    <select name="location_proxy_alt_id" className="input-field" value={formData.location_proxy_alt_id} onChange={handleChange}>
+                      <option value="">-- Sin Location Proxy Alternativa --</option>
+                      {locations.map((loc) => (
+                        <option key={loc.id} value={loc.id}>
+                          {loc.location} ({loc.state}) {loc.is_shared === 1 ? '🌐' : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
 
-              <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                <label>Social Accounts (JSON Format)</label>
-                <textarea name="social_accounts" rows={2} className="input-field" value={formData.social_accounts} onChange={handleChange} placeholder='{"x.com":"", "facebook.com":""}' />
-              </div>
-
-              <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                <label>Description HTML (Biografía en HTML)</label>
-                <textarea name="description_html" rows={3} className="input-field" value={formData.description_html} onChange={handleChange} placeholder='Mario Mosca is a young Latino professional...' />
-              </div>
-
-              <div className="form-group">
-                <label>Género</label>
-                <select name="gender" className="input-field" value={formData.gender} onChange={handleChange}>
-                  <option value="M">Masculino (M)</option>
-                  <option value="F">Femenino (F)</option>
-                  <option value="O">Otro (O)</option>
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label>País ISO (3 letras)</label>
-                <input type="text" className="input-field" name="pais_iso" maxLength={3} value={formData.pais_iso} onChange={handleChange} placeholder="ARG, MEX, ESP..." />
-              </div>
-
-              <div className="form-group">
-                <label>Día Nacimiento</label>
-                <input type="number" className="input-field" name="day_nac" min={1} max={31} value={formData.day_nac} onChange={handleChange} />
-              </div>
-
-              <div className="form-group">
-                <label>Mes Nacimiento</label>
-                <input type="number" className="input-field" name="mes_nac" min={1} max={12} value={formData.mes_nac} onChange={handleChange} />
-              </div>
-
-              <div className="form-group">
-                <label>Año Nacimiento</label>
-                <input type="number" className="input-field" name="year_nac" min={1900} max={2030} value={formData.year_nac} onChange={handleChange} />
-              </div>
-
-              <div className="form-group">
-                <label>Zona Horaria</label>
-                <input type="text" className="input-field" name="time_zone" value={formData.time_zone} onChange={handleChange} />
-              </div>
-
-              <div className="form-group">
-                <label>Proxy Asociado (Opcional)</label>
-                <select name="proxy_id" className="input-field" value={formData.proxy_id} onChange={handleChange}>
-                  <option value="">-- Sin Proxy --</option>
-                  {proxies.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      Proxy #{p.id} ({p.ip}:{p.port})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label>Proxy 2 Secundario (Opcional)</label>
-                <select name="proxy2_id" className="input-field" value={formData.proxy2_id} onChange={handleChange}>
-                  <option value="">-- Sin Proxy 2 --</option>
-                  {proxies.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      Proxy #{p.id} ({p.ip}:{p.port})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label>Ubicación Asociada (Opcional)</label>
-                <select name="location_id" className="input-field" value={formData.location_id} onChange={handleChange}>
-                  <option value="">-- Sin Ubicación --</option>
-                  {locations.map((loc) => (
-                    <option key={loc.id} value={loc.id}>
-                      {loc.location} ({loc.state}) {loc.is_shared === 1 ? '🌐' : ''}
-                    </option>
-                  ))}
-                </select>
+                {/* Banner de Sincronización de Actividades */}
                 {formData.location_id && (
-                  <div style={{ marginTop: '0.6rem' }}>
+                  <div style={{ marginTop: '-0.25rem' }}>
                     <button
                       type="button"
                       className="btn btn-secondary"
@@ -588,362 +553,434 @@ const EditProfile: React.FC = () => {
                     )}
                   </div>
                 )}
+
+                {/* Fila 4: Etiqueta, Lote, Estado */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+                  <div className="form-group">
+                    <label>🏷️ Etiqueta / Tag (Opcional)</label>
+                    <select name="tag_id" className="input-field" value={formData.tag_id} onChange={handleChange}>
+                      <option value="">-- Sin Etiqueta --</option>
+                      {tags.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label>📦 Lote de Perfiles (Opcional)</label>
+                    <select name="lote_id" className="input-field" value={formData.lote_id} onChange={handleChange}>
+                      <option value="">-- Sin Lote --</option>
+                      {lotes.map((l) => (
+                        <option key={l.id} value={l.id}>
+                          {l.name} {l.proveedor ? `(${l.proveedor})` : ''} {l.is_shared === 1 ? '🌐' : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600 }}>
+                      <span>🚦 Estado del Perfil (Status)</span>
+                    </label>
+                    <select
+                      name="status"
+                      className="input-field"
+                      value={formData.status}
+                      onChange={handleChange}
+                      style={{ fontWeight: 600 }}
+                    >
+                      <option value={1}>Nuevo</option>
+                      <option value={2}>En Preparación</option>
+                      <option value={3}>Listo</option>
+                      <option value={4}>Trabajando</option>
+                      <option value={5}>En Pausa</option>
+                      <option value={6}>En Observación</option>
+                    </select>
+                  </div>
+                </div>
               </div>
 
-              <div className="form-group">
-                <label>🛰️ Location Proxy (Opcional)</label>
-                <select name="location_proxy_id" className="input-field" value={formData.location_proxy_id} onChange={handleChange}>
-                  <option value="">-- Sin Location Proxy --</option>
-                  {locations.map((loc) => (
-                    <option key={loc.id} value={loc.id}>
-                      {loc.location} ({loc.state}) {loc.is_shared === 1 ? '🌐' : ''}
-                    </option>
-                  ))}
-                </select>
+              {/* COLUMNA 2: CREDENCIALES & SEGURIDAD GOOGLE */}
+              <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', padding: '1.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem', marginBottom: '0.25rem' }}>
+                  <Key size={18} style={{ color: 'var(--primary)' }} />
+                  <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 600 }}>Credenciales & Seguridad Google</h3>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div className="form-group">
+                    <label>Correo Gmail</label>
+                    <input type="email" className="input-field" name="gmail" value={formData.gmail} onChange={handleChange} placeholder="cuenta@gmail.com" />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Teléfono (Opcional)</label>
+                    <input type="text" className="input-field" name="telefono" value={formData.telefono} onChange={handleChange} placeholder="Ej: +52 55 1234 5678" />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Contraseña Gmail Actual</label>
+                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                      <input
+                        type={showPasswords.gmail_password ? 'text' : 'password'}
+                        className="input-field"
+                        name="gmail_password"
+                        value={formData.gmail_password}
+                        onChange={handleChange}
+                        placeholder="••••••••"
+                        style={{ paddingRight: '2.5rem' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => togglePasswordVisibility('gmail_password')}
+                        style={{
+                          position: 'absolute',
+                          right: '0.75rem',
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          color: 'var(--text-muted)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          padding: 0
+                        }}
+                        title={showPasswords.gmail_password ? 'Ocultar contraseña' : 'Ver contraseña'}
+                      >
+                        {showPasswords.gmail_password ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label>Contraseña Google Anterior</label>
+                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                      <input
+                        type={showPasswords.gmail_password_prev ? 'text' : 'password'}
+                        className="input-field"
+                        name="gmail_password_prev"
+                        value={formData.gmail_password_prev}
+                        onChange={handleChange}
+                        placeholder="Contraseña anterior..."
+                        style={{ paddingRight: '2.5rem' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => togglePasswordVisibility('gmail_password_prev')}
+                        style={{
+                          position: 'absolute',
+                          right: '0.75rem',
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          color: 'var(--text-muted)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          padding: 0
+                        }}
+                        title={showPasswords.gmail_password_prev ? 'Ocultar contraseña' : 'Ver contraseña'}
+                      >
+                        {showPasswords.gmail_password_prev ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label>Correo de Recuperación (Gmail)</label>
+                    <input type="email" className="input-field" name="email_recovery" value={formData.email_recovery} onChange={handleChange} placeholder="recuperacion@gmail.com" />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Correo de Recuperación Anterior</label>
+                    <input type="email" className="input-field" name="email_recovery_prev" value={formData.email_recovery_prev} onChange={handleChange} placeholder="recuperacion_anterior@gmail.com" />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Código 2FA Actual (Opcional)</label>
+                    <input type="text" className="input-field" name="two_fa" value={formData.two_fa} onChange={handleChange} placeholder="Ej: JBSWY3DPEHPK3PXP" />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Código 2FA Anterior (Opcional)</label>
+                    <input type="text" className="input-field" name="two_fa_prev" value={formData.two_fa_prev} onChange={handleChange} placeholder="Secreto OTP anterior..." />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Correo de Perfil Secundario</label>
+                    <input type="email" className="input-field" name="profile_email" value={formData.profile_email} onChange={handleChange} placeholder="perfil@dominio.com" />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Contraseña Correo Perfil</label>
+                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                      <input
+                        type={showPasswords.profile_email_password ? 'text' : 'password'}
+                        className="input-field"
+                        name="profile_email_password"
+                        value={formData.profile_email_password}
+                        onChange={handleChange}
+                        placeholder="••••••••"
+                        style={{ paddingRight: '2.5rem' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => togglePasswordVisibility('profile_email_password')}
+                        style={{
+                          position: 'absolute',
+                          right: '0.75rem',
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          color: 'var(--text-muted)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          padding: 0
+                        }}
+                        title={showPasswords.profile_email_password ? 'Ocultar contraseña' : 'Ver contraseña'}
+                      >
+                        {showPasswords.profile_email_password ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sección Cambio de Credenciales Google */}
+                <div style={{ marginTop: '0.5rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
+                  <h4 style={{ margin: '0 0 0.4rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.95rem', color: 'var(--primary)' }}>
+                    <ShieldCheck size={18} /> Actualización de Seguridad / Cambio de Datos en Google
+                  </h4>
+                  <p style={{ margin: '0 0 0.85rem 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    Datos para activar el cambio forzado de contraseña, correo de recuperación y 2FA en Google.
+                  </p>
+
+                  <div className="form-group" style={{ marginBottom: '1rem' }}>
+                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', fontWeight: 600 }}>
+                      <input
+                        type="checkbox"
+                        name="gmail_change_2fa"
+                        checked={Boolean(formData.gmail_change_2fa)}
+                        onChange={handleChange}
+                        style={{ width: '1.15rem', height: '1.15rem', accentColor: 'var(--primary)', cursor: 'pointer' }}
+                      />
+                      <span>Activar cambio de 2FA en Google (gmail_change_2fa)</span>
+                    </label>
+                    <small style={{ display: 'block', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                      Habilita la orden para cambiar y actualizar el código de verificación en dos pasos (2FA) en la cuenta de Google.
+                    </small>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <div className="form-group">
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                        <label style={{ margin: 0, fontWeight: 600 }}>Nueva Contraseña de Gmail</label>
+                        <button
+                          type="button"
+                          onClick={handleGenerateNewPassword}
+                          className="btn-secondary"
+                          style={{
+                            padding: '0.25rem 0.65rem',
+                            fontSize: '0.75rem',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.35rem',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            border: '1px solid var(--border-color)',
+                            backgroundColor: 'var(--bg-card)'
+                          }}
+                          title="Generar contraseña segura aleatoria para Google"
+                        >
+                          <Wand2 size={13} style={{ color: 'var(--primary)' }} />
+                          <span>Generar Password</span>
+                        </button>
+                      </div>
+                      <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                        <input
+                          type={showPasswords.gmail_new_password ? 'text' : 'password'}
+                          className="input-field"
+                          name="gmail_new_password"
+                          value={formData.gmail_new_password}
+                          onChange={handleChange}
+                          placeholder="Nueva contraseña deseada..."
+                          style={{ paddingRight: '2.5rem' }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => togglePasswordVisibility('gmail_new_password')}
+                          style={{
+                            position: 'absolute',
+                            right: '0.75rem',
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            color: 'var(--text-muted)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            padding: 0
+                          }}
+                          title={showPasswords.gmail_new_password ? 'Ocultar contraseña' : 'Ver contraseña'}
+                        >
+                          {showPasswords.gmail_new_password ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="form-group">
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem', flexWrap: 'wrap', gap: '0.4rem' }}>
+                        <label style={{ margin: 0, fontWeight: 600 }}>Nuevo Correo de Recuperación</label>
+                        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                          {Boolean(formData.name || formData.lastname) && (
+                            <button
+                              type="button"
+                              onClick={handleGenerateNewRecoveryEmailFromName}
+                              className="btn-secondary"
+                              style={{
+                                padding: '0.25rem 0.6rem',
+                                fontSize: '0.75rem',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.35rem',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                border: '1px solid var(--border-color)',
+                                backgroundColor: 'var(--bg-card)'
+                              }}
+                              title={`Generar usando "${formData.name || ''} ${formData.lastname || ''}" + 00..99 + ${DEFAULT_RECOVERY_DOMAIN}`}
+                            >
+                              <Sparkles size={12} style={{ color: 'var(--primary)' }} />
+                              <span>Con Nombre Perfil</span>
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={handleGenerateNewRecoveryEmailRandom}
+                            className="btn-secondary"
+                            style={{
+                              padding: '0.25rem 0.65rem',
+                              fontSize: '0.75rem',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.35rem',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              border: '1px solid var(--border-color)',
+                              backgroundColor: 'var(--bg-card)'
+                            }}
+                            title={`Generar correo aleatorio (nombres + apellidos + 00..99 + ${DEFAULT_RECOVERY_DOMAIN})`}
+                          >
+                            <Sparkles size={13} style={{ color: 'var(--primary)' }} />
+                            <span>Generar Correo ({DEFAULT_RECOVERY_DOMAIN})</span>
+                          </button>
+                        </div>
+                      </div>
+                      <input
+                        type="email"
+                        className="input-field"
+                        name="gmail_new_recovery_email"
+                        value={formData.gmail_new_recovery_email}
+                        onChange={handleChange}
+                        placeholder={`ej: juanperez42${DEFAULT_RECOVERY_DOMAIN}`}
+                      />
+                      <small style={{ display: 'block', color: 'var(--text-muted)', marginTop: '0.25rem', fontSize: '0.75rem' }}>
+                        Formato: nombre + apellido + 00..99 + {DEFAULT_RECOVERY_DOMAIN} (nombres y dominio modificables en <code>src/profileGenerators.ts</code>)
+                      </small>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <div className="form-group">
-                <label>🔄 Location Proxy Alternativa (Opcional)</label>
-                <select name="location_proxy_alt_id" className="input-field" value={formData.location_proxy_alt_id} onChange={handleChange}>
-                  <option value="">-- Sin Location Proxy Alternativa --</option>
-                  {locations.map((loc) => (
-                    <option key={loc.id} value={loc.id}>
-                      {loc.location} ({loc.state}) {loc.is_shared === 1 ? '🌐' : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label>🏷️ Etiqueta / Tag (Opcional)</label>
-                <select name="tag_id" className="input-field" value={formData.tag_id} onChange={handleChange}>
-                  <option value="">-- Sin Etiqueta --</option>
-                  {tags.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label>📦 Lote de Perfiles (Opcional)</label>
-                <select name="lote_id" className="input-field" value={formData.lote_id} onChange={handleChange}>
-                  <option value="">-- Sin Lote --</option>
-                  {lotes.map((l) => (
-                    <option key={l.id} value={l.id}>
-                      {l.name} {l.proveedor ? `(${l.proveedor})` : ''} {l.is_shared === 1 ? '🌐' : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                <label>Biografía (Bio Simple)</label>
-                <textarea name="bio" rows={2} className="input-field" value={formData.bio} onChange={handleChange} placeholder="Acerca de este perfil..." />
-              </div>
-
-              <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600 }}>
-                  <span>🚦 Estado del Perfil (Status)</span>
-                </label>
-                <select
-                  name="status"
-                  className="input-field"
-                  value={formData.status}
-                  onChange={handleChange}
-                  style={{ fontWeight: 600 }}
-                >
-                  <option value={1}>Nuevo</option>
-                  <option value={2}>En Preparación</option>
-                  <option value={3}>Listo</option>
-                  <option value={4}>Trabajando</option>
-                  <option value={5}>En Pausa</option>
-                </select>
-                <small style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '0.25rem', display: 'block' }}>
-                  Estado operativo: 1=Nuevo, 2=En Preparación, 3=Listo, 4=Trabajando, 5=En Pausa.
-                </small>
-              </div>
             </div>
           )}
 
-          {/* TAB 2: CREDENCIALES & CORREOS */}
-          {activeTab === 'credenciales' && (
-            <div className="card" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+          {/* TAB 2: INFORMACIÓN ADICIONAL (RESTO DE CAMPOS BÁSICOS) */}
+          {activeTab === 'adicional' && (
+            <div className="card" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', padding: '1.5rem' }}>
               <div className="form-group">
-                <label>Correo Gmail</label>
-                <input type="email" className="input-field" name="gmail" value={formData.gmail} onChange={handleChange} placeholder="cuenta@gmail.com" />
+                <label>Username</label>
+                <input type="text" className="input-field" name="username" value={formData.username} onChange={handleChange} placeholder="ej. mariomosca" />
               </div>
 
               <div className="form-group">
-                <label>Teléfono (Opcional)</label>
-                <input type="text" className="input-field" name="telefono" value={formData.telefono} onChange={handleChange} placeholder="Ej: +52 55 1234 5678" />
+                <label>Website</label>
+                <input type="text" className="input-field" name="website" value={formData.website} onChange={handleChange} placeholder="https://mariomosca.com" />
               </div>
 
               <div className="form-group">
-                <label>Contraseña Gmail Actual</label>
-                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                  <input
-                    type={showPasswords.gmail_password ? 'text' : 'password'}
-                    className="input-field"
-                    name="gmail_password"
-                    value={formData.gmail_password}
-                    onChange={handleChange}
-                    placeholder="••••••••"
-                    style={{ paddingRight: '2.5rem' }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => togglePasswordVisibility('gmail_password')}
-                    style={{
-                      position: 'absolute',
-                      right: '0.75rem',
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      color: 'var(--text-muted)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      padding: 0
-                    }}
-                    title={showPasswords.gmail_password ? 'Ocultar contraseña' : 'Ver contraseña'}
-                  >
-                    {showPasswords.gmail_password ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
+                <label>Pronouns (Pronombres)</label>
+                <select name="pronouns" className="input-field" value={formData.pronouns} onChange={handleChange}>
+                  <option value="Don't specify">Don't specify</option>
+                  <option value="they/them">they/them</option>
+                  <option value="she/her">she/her</option>
+                  <option value="he/him">he/him</option>
+                </select>
               </div>
 
               <div className="form-group">
-                <label>Contraseña Google Anterior</label>
-                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                  <input
-                    type={showPasswords.gmail_password_prev ? 'text' : 'password'}
-                    className="input-field"
-                    name="gmail_password_prev"
-                    value={formData.gmail_password_prev}
-                    onChange={handleChange}
-                    placeholder="Contraseña anterior..."
-                    style={{ paddingRight: '2.5rem' }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => togglePasswordVisibility('gmail_password_prev')}
-                    style={{
-                      position: 'absolute',
-                      right: '0.75rem',
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      color: 'var(--text-muted)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      padding: 0
-                    }}
-                    title={showPasswords.gmail_password_prev ? 'Ocultar contraseña' : 'Ver contraseña'}
-                  >
-                    {showPasswords.gmail_password_prev ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label>Correo de Recuperación (Gmail)</label>
-                <input type="email" className="input-field" name="email_recovery" value={formData.email_recovery} onChange={handleChange} placeholder="recuperacion@gmail.com" />
-              </div>
-
-              <div className="form-group">
-                <label>Correo de Recuperación Anterior</label>
-                <input type="email" className="input-field" name="email_recovery_prev" value={formData.email_recovery_prev} onChange={handleChange} placeholder="recuperacion_anterior@gmail.com" />
-              </div>
-
-              <div className="form-group">
-                <label>Código 2FA Actual (Opcional)</label>
-                <input type="text" className="input-field" name="two_fa" value={formData.two_fa} onChange={handleChange} placeholder="Ej: JBSWY3DPEHPK3PXP" />
-              </div>
-
-              <div className="form-group">
-                <label>Código 2FA Anterior (Opcional)</label>
-                <input type="text" className="input-field" name="two_fa_prev" value={formData.two_fa_prev} onChange={handleChange} placeholder="Secreto OTP anterior..." />
-              </div>
-
-              <div className="form-group">
-                <label>Correo de Perfil Secundario</label>
-                <input type="email" className="input-field" name="profile_email" value={formData.profile_email} onChange={handleChange} placeholder="perfil@dominio.com" />
-              </div>
-
-              <div className="form-group">
-                <label>Contraseña Correo Perfil</label>
-                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                  <input
-                    type={showPasswords.profile_email_password ? 'text' : 'password'}
-                    className="input-field"
-                    name="profile_email_password"
-                    value={formData.profile_email_password}
-                    onChange={handleChange}
-                    placeholder="••••••••"
-                    style={{ paddingRight: '2.5rem' }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => togglePasswordVisibility('profile_email_password')}
-                    style={{
-                      position: 'absolute',
-                      right: '0.75rem',
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      color: 'var(--text-muted)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      padding: 0
-                    }}
-                    title={showPasswords.profile_email_password ? 'Ocultar contraseña' : 'Ver contraseña'}
-                  >
-                    {showPasswords.profile_email_password ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-              </div>
-
-              {/* Sección Cambio de Credenciales Google */}
-              <div style={{ gridColumn: 'span 2', marginTop: '1rem', paddingTop: '1.25rem', borderTop: '1px solid var(--border-color)' }}>
-                <h4 style={{ margin: '0 0 0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.95rem', color: 'var(--primary)' }}>
-                  <ShieldCheck size={18} /> Actualización de Seguridad / Cambio de Datos en Google
-                </h4>
-                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                  Datos para activar el cambio de contraseña, correo de recuperación y 2FA en Google.
-                </p>
+                <label>Company (Empresa Básica)</label>
+                <input type="text" className="input-field" name="company_basic" value={formData.company_basic} onChange={handleChange} placeholder="ej. Coca Cola" />
               </div>
 
               <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', fontWeight: 600 }}>
-                  <input
-                    type="checkbox"
-                    name="gmail_change_2fa"
-                    checked={Boolean(formData.gmail_change_2fa)}
-                    onChange={handleChange}
-                    style={{ width: '1.15rem', height: '1.15rem', accentColor: 'var(--primary)', cursor: 'pointer' }}
-                  />
-                  <span>Activar cambio de 2FA en Google (gmail_change_2fa)</span>
-                </label>
-                <small style={{ display: 'block', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-                  Habilita la orden para cambiar y actualizar el código de verificación en dos pasos (2FA) en la cuenta de Google.
-                </small>
+                <label>Profile Credential (Incluye Ubicación)</label>
+                <input type="text" className="input-field" name="profile_credential" value={formData.profile_credential} onChange={handleChange} placeholder="ej. Full Stack Programmer at Coca Cola" />
+              </div>
+
+              <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                <label>Topic About You (Temas / Intereses)</label>
+                <input type="text" className="input-field" name="topic_about_you" value={formData.topic_about_you} onChange={handleChange} placeholder="ej. Live Music, Street Tacos, Hiking, Paddleboarding" />
+              </div>
+
+              <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                <label>Social Accounts (JSON Format)</label>
+                <textarea name="social_accounts" rows={2} className="input-field" value={formData.social_accounts} onChange={handleChange} placeholder='{"x.com":"", "facebook.com":""}' />
+              </div>
+
+              <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                <label>Description HTML (Biografía en HTML)</label>
+                <textarea name="description_html" rows={3} className="input-field" value={formData.description_html} onChange={handleChange} placeholder='Mario Mosca is a young Latino professional...' />
               </div>
 
               <div className="form-group">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                  <label style={{ margin: 0, fontWeight: 600 }}>Nueva Contraseña de Gmail</label>
-                  <button
-                    type="button"
-                    onClick={handleGenerateNewPassword}
-                    className="btn-secondary"
-                    style={{
-                      padding: '0.25rem 0.65rem',
-                      fontSize: '0.75rem',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.35rem',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      border: '1px solid var(--border-color)',
-                      backgroundColor: 'var(--bg-card)'
-                    }}
-                    title="Generar contraseña segura aleatoria para Google"
-                  >
-                    <Wand2 size={13} style={{ color: 'var(--primary)' }} />
-                    <span>Generar Password</span>
-                  </button>
-                </div>
-                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                  <input
-                    type={showPasswords.gmail_new_password ? 'text' : 'password'}
-                    className="input-field"
-                    name="gmail_new_password"
-                    value={formData.gmail_new_password}
-                    onChange={handleChange}
-                    placeholder="Nueva contraseña deseada..."
-                    style={{ paddingRight: '2.5rem' }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => togglePasswordVisibility('gmail_new_password')}
-                    style={{
-                      position: 'absolute',
-                      right: '0.75rem',
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      color: 'var(--text-muted)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      padding: 0
-                    }}
-                    title={showPasswords.gmail_new_password ? 'Ocultar contraseña' : 'Ver contraseña'}
-                  >
-                    {showPasswords.gmail_new_password ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
+                <label>Género</label>
+                <select name="gender" className="input-field" value={formData.gender} onChange={handleChange}>
+                  <option value="M">Masculino (M)</option>
+                  <option value="F">Femenino (F)</option>
+                  <option value="O">Otro (O)</option>
+                </select>
               </div>
 
               <div className="form-group">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem', flexWrap: 'wrap', gap: '0.4rem' }}>
-                  <label style={{ margin: 0, fontWeight: 600 }}>Nuevo Correo de Recuperación</label>
-                  <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                    {Boolean(formData.name || formData.lastname) && (
-                      <button
-                        type="button"
-                        onClick={handleGenerateNewRecoveryEmailFromName}
-                        className="btn-secondary"
-                        style={{
-                          padding: '0.25rem 0.6rem',
-                          fontSize: '0.75rem',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.35rem',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          border: '1px solid var(--border-color)',
-                          backgroundColor: 'var(--bg-card)'
-                        }}
-                        title={`Generar usando "${formData.name || ''} ${formData.lastname || ''}" + 00..99 + ${DEFAULT_RECOVERY_DOMAIN}`}
-                      >
-                        <Sparkles size={12} style={{ color: 'var(--primary)' }} />
-                        <span>Con Nombre Perfil</span>
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={handleGenerateNewRecoveryEmailRandom}
-                      className="btn-secondary"
-                      style={{
-                        padding: '0.25rem 0.65rem',
-                        fontSize: '0.75rem',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.35rem',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        border: '1px solid var(--border-color)',
-                        backgroundColor: 'var(--bg-card)'
-                      }}
-                      title={`Generar correo aleatorio (nombres + apellidos + 00..99 + ${DEFAULT_RECOVERY_DOMAIN})`}
-                    >
-                      <Sparkles size={13} style={{ color: 'var(--primary)' }} />
-                      <span>Generar Correo ({DEFAULT_RECOVERY_DOMAIN})</span>
-                    </button>
+                <label>País ISO (3 letras)</label>
+                <input type="text" className="input-field" name="pais_iso" maxLength={3} value={formData.pais_iso} onChange={handleChange} placeholder="ARG, MEX, ESP..." />
+              </div>
+
+              <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                <label>Fecha de Nacimiento</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+                  <div>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.2rem' }}>Día</span>
+                    <input type="number" className="input-field" name="day_nac" min={1} max={31} value={formData.day_nac} onChange={handleChange} />
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.2rem' }}>Mes</span>
+                    <input type="number" className="input-field" name="mes_nac" min={1} max={12} value={formData.mes_nac} onChange={handleChange} />
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.2rem' }}>Año</span>
+                    <input type="number" className="input-field" name="year_nac" min={1900} max={2030} value={formData.year_nac} onChange={handleChange} />
                   </div>
                 </div>
-                <input
-                  type="email"
-                  className="input-field"
-                  name="gmail_new_recovery_email"
-                  value={formData.gmail_new_recovery_email}
-                  onChange={handleChange}
-                  placeholder={`ej: juanperez42${DEFAULT_RECOVERY_DOMAIN}`}
-                />
-                <small style={{ display: 'block', color: 'var(--text-muted)', marginTop: '0.25rem', fontSize: '0.75rem' }}>
-                  Formato: nombre + apellido + 00..99 + {DEFAULT_RECOVERY_DOMAIN} (nombres y dominio modificables en <code>src/profileGenerators.ts</code>)
-                </small>
+              </div>
+
+              <div className="form-group">
+                <label>Zona Horaria</label>
+                <input type="text" className="input-field" name="time_zone" value={formData.time_zone} onChange={handleChange} />
+              </div>
+
+              <div className="form-group">
+                <label>Biografía (Bio Simple)</label>
+                <textarea name="bio" rows={2} className="input-field" value={formData.bio} onChange={handleChange} placeholder="Acerca de este perfil..." />
               </div>
             </div>
           )}

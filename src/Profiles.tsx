@@ -149,6 +149,13 @@ const getStatusBadge = (status?: number) => {
         color: '#ef4444',
         border: 'rgba(239, 68, 68, 0.35)',
       };
+    case 6:
+      return {
+        label: 'En Observación',
+        bg: 'rgba(249, 115, 22, 0.15)',
+        color: '#ea580c',
+        border: 'rgba(249, 115, 22, 0.35)',
+      };
     default:
       return {
         label: 'Trabajando',
@@ -244,6 +251,8 @@ const Profiles: React.FC = () => {
 
   const filteredProfiles = useMemo(() => {
     return profiles.filter((p) => {
+      // Excluir perfiles en observación de la lista general
+      if (Number(p.status) === 6) return false;
       if (selectedLocationId === 'none') {
         return !p.location_id;
       }

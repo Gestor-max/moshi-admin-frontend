@@ -495,9 +495,10 @@ const NewProfile: React.FC = () => {
                   <option value={3}>Listo</option>
                   <option value={4}>Trabajando</option>
                   <option value={5}>En Pausa</option>
+                  <option value={6}>En Observación</option>
                 </select>
                 <small style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '0.25rem', display: 'block' }}>
-                  Estado operativo: 1=Nuevo, 2=En Preparación, 3=Listo, 4=Trabajando, 5=En Pausa.
+                  Estado operativo: 1=Nuevo, 2=En Preparación, 3=Listo, 4=Trabajando, 5=En Pausa, 6=En Observación.
                 </small>
               </div>
             </div>

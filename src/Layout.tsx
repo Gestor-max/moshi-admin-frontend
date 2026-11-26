@@ -1,14 +1,25 @@
-import React, { useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { useLanguage } from './LanguageContext';
-import { Home, UserCheck, Server, User, LogOut, Bot, Globe, Users, Menu, X, Link as LinkIcon, PlayCircle, Languages, MapPin, Archive, Tag, Layers, Calendar, Skull, LayoutGrid, Boxes, Star } from 'lucide-react';
+import { Home, UserCheck, Server, User, LogOut, Bot, Globe, Users, Menu, X, Link as LinkIcon, PlayCircle, Languages, MapPin, Archive, Tag, Layers, Calendar, Skull, LayoutGrid, Boxes, Star, Eye, ChevronDown, BookOpen } from 'lucide-react';
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { logout, isAdmin } = useAuth();
   const { language, setLanguage, t } = useLanguage();
   const navigate = useNavigate();
+  const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const catalogRoutes = ['/tags', '/lotes', '/locations', '/linked-profiles', '/automations'];
+  const isCatalogActive = catalogRoutes.some(route => location.pathname.startsWith(route));
+  const [catalogsOpen, setCatalogsOpen] = useState(isCatalogActive);
+
+  useEffect(() => {
+    if (isCatalogActive) {
+      setCatalogsOpen(true);
+    }
+  }, [isCatalogActive]);
 
   const handleLogout = () => {
     logout();
@@ -96,23 +107,17 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           <NavLink to="/profiles/board" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={closeSidebar}>
             <LayoutGrid size={18} /> {t('nav_profiles_board') || 'Tablero Perfiles'}
           </NavLink>
+          <NavLink to="/profiles/observation" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={closeSidebar}>
+            <Eye size={18} style={{ color: '#f97316' }} /> {t('nav_observation_profiles') || 'Perfiles en Observación'}
+          </NavLink>
           <NavLink to="/profiles/archived" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={closeSidebar}>
             <Archive size={18} /> {t('nav_archived_profiles')}
           </NavLink>
           <NavLink to="/profiles/zombie" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={closeSidebar}>
             <Skull size={18} style={{ color: '#ec4899' }} /> {t('nav_zombie_profiles')}
           </NavLink>
-          <NavLink to="/tags" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={closeSidebar}>
-            <Tag size={18} /> {t('nav_tags')}
-          </NavLink>
-          <NavLink to="/lotes" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={closeSidebar}>
-            <Boxes size={18} /> {t('nav_lotes') || 'Lotes'}
-          </NavLink>
           <NavLink to="/proxies" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={closeSidebar}>
             <Server size={18} /> {t('nav_proxies')}
-          </NavLink>
-          <NavLink to="/locations" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={closeSidebar}>
-            <MapPin size={18} /> {t('nav_locations') || 'Ubicaciones'}
           </NavLink>
           <NavLink to="/schedules" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={closeSidebar}>
             <Calendar size={18} /> {t('nav_schedules') || 'Agenda'}
@@ -123,12 +128,47 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           <NavLink to="/gmaps-reviews" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={closeSidebar}>
             <Star size={18} /> {t('nav_gmaps_reviews') || 'Reseñas Globales'}
           </NavLink>
-          <NavLink to="/linked-profiles" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={closeSidebar}>
-            <LinkIcon size={18} /> {t('nav_linked')}
-          </NavLink>
-          <NavLink to="/automations" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={closeSidebar}>
-            <PlayCircle size={18} /> {t('nav_automations')}
-          </NavLink>
+
+          {/* Catálogos Accordion Submenu */}
+          <div className="sidebar-group">
+            <button
+              type="button"
+              className={`sidebar-link sidebar-dropdown-btn ${isCatalogActive ? 'active-parent' : ''}`}
+              onClick={() => setCatalogsOpen(!catalogsOpen)}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <BookOpen size={18} style={{ color: isCatalogActive ? 'var(--primary)' : undefined }} />
+                <span>{t('nav_catalogs') || 'Catálogos'}</span>
+              </div>
+              <ChevronDown
+                size={16}
+                style={{
+                  transition: 'transform 0.2s ease',
+                  transform: catalogsOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                  color: isCatalogActive ? 'var(--primary)' : '#94a3af',
+                }}
+              />
+            </button>
+            {catalogsOpen && (
+              <div className="sidebar-submenu">
+                <NavLink to="/tags" className={({ isActive }) => `sidebar-link sidebar-sublink ${isActive ? 'active' : ''}`} onClick={closeSidebar}>
+                  <Tag size={16} /> {t('nav_tags')}
+                </NavLink>
+                <NavLink to="/lotes" className={({ isActive }) => `sidebar-link sidebar-sublink ${isActive ? 'active' : ''}`} onClick={closeSidebar}>
+                  <Boxes size={16} /> {t('nav_lotes') || 'Lotes'}
+                </NavLink>
+                <NavLink to="/locations" className={({ isActive }) => `sidebar-link sidebar-sublink ${isActive ? 'active' : ''}`} onClick={closeSidebar}>
+                  <MapPin size={16} /> {t('nav_locations') || 'Ubicaciones'}
+                </NavLink>
+                <NavLink to="/linked-profiles" className={({ isActive }) => `sidebar-link sidebar-sublink ${isActive ? 'active' : ''}`} onClick={closeSidebar}>
+                  <LinkIcon size={16} /> {t('nav_linked')}
+                </NavLink>
+                <NavLink to="/automations" className={({ isActive }) => `sidebar-link sidebar-sublink ${isActive ? 'active' : ''}`} onClick={closeSidebar}>
+                  <PlayCircle size={16} /> {t('nav_automations')}
+                </NavLink>
+              </div>
+            )}
+          </div>
           {isAdmin && (
             <NavLink to="/websites" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={closeSidebar}>
               <Globe size={18} /> {t('nav_websites')}
