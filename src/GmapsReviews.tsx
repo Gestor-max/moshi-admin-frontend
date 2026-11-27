@@ -18,6 +18,13 @@ import {
   FileText
 } from 'lucide-react';
 
+interface LocationOption {
+  id: number;
+  state: string;
+  location: string;
+  is_shared?: number;
+}
+
 interface GmapsReviewItem {
   id: number;
   place_id: string;
@@ -27,6 +34,7 @@ interface GmapsReviewItem {
   status: number; // 0: Nueva/Disponible, 1: Aplicada
   link_review?: string;
   profile_id?: number | null;
+  location_id?: number | null;
   created_at: string;
   updated_at: string;
   profile?: {
@@ -36,13 +44,21 @@ interface GmapsReviewItem {
     gmail?: string;
     profile_email?: string;
   } | null;
+  location?: {
+    id: number;
+    state: string;
+    location: string;
+    is_shared?: number;
+  } | null;
 }
 
 export const GmapsReviews: React.FC = () => {
   const [reviews, setReviews] = useState<GmapsReviewItem[]>([]);
+  const [locations, setLocations] = useState<LocationOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all'); // 'all' | '0' | '1'
+  const [locationFilter, setLocationFilter] = useState<string>('all'); // 'all' | 'none' | '<id>'
 
   // Modal Crear / Editar
   const [showModal, setShowModal] = useState(false);
@@ -54,19 +70,31 @@ export const GmapsReviews: React.FC = () => {
     review: '',
     status: 0,
     link_review: '',
+    location_id: '' as string | number,
   });
 
   // Modal Importar CSV
   const [showCsvModal, setShowCsvModal] = useState(false);
   const [csvText, setCsvText] = useState('');
+  const [csvLocationId, setCsvLocationId] = useState<string>('');
   const [csvPreview, setCsvPreview] = useState<Array<{ place_id: string; rating: number; review: string }>>([]);
   const [importing, setImporting] = useState(false);
+
+  const fetchLocations = async () => {
+    try {
+      const res = await api.get('/locations');
+      setLocations(Array.isArray(res.data) ? res.data : []);
+    } catch (err) {
+      console.error('Error al cargar ubicaciones:', err);
+    }
+  };
 
   const fetchReviews = async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
       if (statusFilter !== 'all') params.append('status', statusFilter);
+      if (locationFilter !== 'all') params.append('location_id', locationFilter);
       if (search.trim()) params.append('search', search.trim());
 
       const res = await api.get(`/gmaps-reviews?${params.toString()}`);
@@ -79,8 +107,12 @@ export const GmapsReviews: React.FC = () => {
   };
 
   useEffect(() => {
+    fetchLocations();
+  }, []);
+
+  useEffect(() => {
     fetchReviews();
-  }, [statusFilter]);
+  }, [statusFilter, locationFilter]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -102,6 +134,7 @@ export const GmapsReviews: React.FC = () => {
       review: '',
       status: 0,
       link_review: '',
+      location_id: locationFilter !== 'all' && locationFilter !== 'none' ? locationFilter : '',
     });
     setShowModal(true);
   };
@@ -116,6 +149,7 @@ export const GmapsReviews: React.FC = () => {
       review: item.review || '',
       status: item.status || 0,
       link_review: item.link_review || '',
+      location_id: item.location_id ? String(item.location_id) : '',
     });
     setShowModal(true);
   };
@@ -128,11 +162,16 @@ export const GmapsReviews: React.FC = () => {
       return;
     }
 
+    const payload = {
+      ...formData,
+      location_id: formData.location_id !== '' ? Number(formData.location_id) : null,
+    };
+
     try {
       if (editingReview) {
-        await api.patch(`/gmaps-reviews/${editingReview.id}`, formData);
+        await api.patch(`/gmaps-reviews/${editingReview.id}`, payload);
       } else {
-        await api.post('/gmaps-reviews', formData);
+        await api.post('/gmaps-reviews', payload);
       }
       setShowModal(false);
       fetchReviews();
@@ -268,11 +307,15 @@ export const GmapsReviews: React.FC = () => {
 
     setImporting(true);
     try {
-      const res = await api.post('/gmaps-reviews/bulk', { reviews: csvPreview });
+      const res = await api.post('/gmaps-reviews/bulk', {
+        reviews: csvPreview,
+        location_id: csvLocationId !== '' ? Number(csvLocationId) : null,
+      });
       alert(`✅ ${res.data.message || 'Reseñas importadas correctamente.'}`);
       setShowCsvModal(false);
       setCsvText('');
       setCsvPreview([]);
+      setCsvLocationId('');
       fetchReviews();
     } catch (err: any) {
       console.error(err);
@@ -291,7 +334,7 @@ export const GmapsReviews: React.FC = () => {
             <Star color="#f59e0b" fill="#f59e0b" size={26} /> Reseñas Globales (Pool de Reviews)
           </h1>
           <p style={{ margin: '0.35rem 0 0', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-            Bolsa centralizada de reseñas para Google Maps. Cualquier perfil que ejecute "GMaps Dejar Reseña" tomará una reseña disponible de este pool.
+            Bolsa centralizada de reseñas para Google Maps asignables por Ubicación (Location) o Pool Global.
           </p>
         </div>
 
@@ -302,6 +345,7 @@ export const GmapsReviews: React.FC = () => {
             onClick={() => {
               setCsvText('');
               setCsvPreview([]);
+              setCsvLocationId(locationFilter !== 'all' && locationFilter !== 'none' ? locationFilter : '');
               setShowCsvModal(true);
             }}
           >
@@ -352,8 +396,8 @@ export const GmapsReviews: React.FC = () => {
       {/* FILTROS Y BÚSQUEDA */}
       <div className="card" style={{ marginBottom: '1.5rem', padding: '1rem 1.25rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-          {/* TABS DE ESTADO */}
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
+          {/* TABS DE ESTADO Y FILTRO POR LOCATION */}
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
             <button
               type="button"
               className={`btn ${statusFilter === 'all' ? 'btn-primary' : 'btn-secondary'}`}
@@ -378,10 +422,26 @@ export const GmapsReviews: React.FC = () => {
             >
               ✅ Aplicadas ({appliedCount})
             </button>
+
+            <select
+              className="input-field"
+              value={locationFilter}
+              onChange={(e) => setLocationFilter(e.target.value)}
+              style={{ margin: 0, padding: '0.45rem 0.75rem', fontSize: '0.85rem', minWidth: '210px', width: 'auto' }}
+              title="Filtrar por Ubicación"
+            >
+              <option value="all">📍 Todas las Ubicaciones</option>
+              <option value="none">🌐 Sin Ubicación (Global)</option>
+              {locations.map((loc) => (
+                <option key={loc.id} value={String(loc.id)}>
+                  📍 {loc.location} ({loc.state}) {loc.is_shared === 1 ? '🌐' : ''}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* BUSCADOR */}
-          <form onSubmit={handleSearchSubmit} style={{ display: 'flex', gap: '0.5rem', minWidth: '300px' }}>
+          <form onSubmit={handleSearchSubmit} style={{ display: 'flex', gap: '0.5rem', minWidth: '280px' }}>
             <input
               type="text"
               className="input-field"
@@ -411,6 +471,7 @@ export const GmapsReviews: React.FC = () => {
               <tr style={{ background: 'var(--surface-hover)', borderBottom: '1px solid var(--border)' }}>
                 <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>ID</th>
                 <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Place ID / Negocio</th>
+                <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Ubicación</th>
                 <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Calificación</th>
                 <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Texto de la Reseña</th>
                 <th style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Perfil Asignado</th>
@@ -421,116 +482,180 @@ export const GmapsReviews: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {reviews.map((rev) => (
-                <tr key={rev.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                  <td style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', fontWeight: 'bold' }}>#{rev.id}</td>
-                  <td style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', maxWidth: '220px', wordBreak: 'break-all' }}>
-                    {rev.name_place && (
-                      <div style={{ fontWeight: 'bold', color: 'var(--text)', marginBottom: '2px' }}>{rev.name_place}</div>
-                    )}
-                    {rev.place_id ? (
-                      <a
-                        href={rev.place_id.startsWith('http') ? rev.place_id : `https://www.google.com/maps/place/?q=place_id:${rev.place_id}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ color: '#38bdf8', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                      >
-                        <MapPin size={13} /> {rev.place_id}
-                      </a>
-                    ) : (
-                      '-'
-                    )}
-                  </td>
-                  <td style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
-                    <span style={{ color: '#f59e0b', fontWeight: 'bold', fontSize: '1rem' }}>
-                      {'★'.repeat(rev.rating || 5)}{'☆'.repeat(5 - (rev.rating || 5))}
-                    </span>
-                    <span style={{ marginLeft: '6px', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-                      ({rev.rating || 5}/5)
-                    </span>
-                  </td>
-                  <td style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text)', maxWidth: '320px' }}>
-                    <div style={{ maxHeight: '80px', overflowY: 'auto', whiteSpace: 'pre-wrap', lineHeight: '1.4' }}>
-                      {rev.review || <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>Sin texto</span>}
-                    </div>
-                  </td>
-                  <td style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
-                    {rev.profile ? (
-                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                        <span className="badge" style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#3b8df6', fontWeight: 'bold' }}>
-                          Perfil #{rev.profile.id}
+              {reviews.map((rev) => {
+                const targetHref = rev.place_id
+                  ? rev.place_id.startsWith('http')
+                    ? rev.place_id
+                    : `https://www.google.com/maps/place/?q=place_id:${rev.place_id}`
+                  : '';
+                const truncatedPlaceId =
+                  rev.place_id && rev.place_id.length > 32
+                    ? `${rev.place_id.slice(0, 32)}...`
+                    : rev.place_id;
+
+                return (
+                  <tr key={rev.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                    <td style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', fontWeight: 'bold' }}>#{rev.id}</td>
+                    <td style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', maxWidth: '220px', overflow: 'hidden' }}>
+                      {rev.name_place && (
+                        <div
+                          style={{
+                            fontWeight: 'bold',
+                            color: 'var(--text)',
+                            marginBottom: '2px',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            maxWidth: '200px',
+                          }}
+                          title={rev.name_place}
+                        >
+                          {rev.name_place}
+                        </div>
+                      )}
+                      {rev.place_id ? (
+                        <a
+                          href={targetHref}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title={rev.place_id}
+                          style={{
+                            color: '#38bdf8',
+                            textDecoration: 'none',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            maxWidth: '200px',
+                          }}
+                        >
+                          <MapPin size={13} style={{ flexShrink: 0 }} />
+                          <span
+                            style={{
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                              display: 'block',
+                            }}
+                          >
+                            {truncatedPlaceId}
+                          </span>
+                        </a>
+                      ) : (
+                        '-'
+                      )}
+                    </td>
+                    <td style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
+                      {rev.location ? (
+                        <span
+                          className="badge"
+                          style={{
+                            background: 'rgba(16, 185, 129, 0.15)',
+                            color: '#10b981',
+                            fontWeight: 600,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                          }}
+                        >
+                          <MapPin size={12} /> {rev.location.location} ({rev.location.state})
                         </span>
-                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                          {rev.profile.gmail || rev.profile.name}
+                      ) : (
+                        <span className="badge" style={{ background: 'rgba(156, 163, 175, 0.15)', color: '#9ca3af' }}>
+                          Global
                         </span>
+                      )}
+                    </td>
+                    <td style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
+                      <span style={{ color: '#f59e0b', fontWeight: 'bold', fontSize: '1rem' }}>
+                        {'★'.repeat(rev.rating || 5)}{'☆'.repeat(5 - (rev.rating || 5))}
+                      </span>
+                      <span style={{ marginLeft: '6px', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                        ({rev.rating || 5}/5)
+                      </span>
+                    </td>
+                    <td style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'var(--text)', maxWidth: '300px' }}>
+                      <div style={{ maxHeight: '80px', overflowY: 'auto', whiteSpace: 'pre-wrap', lineHeight: '1.4' }}>
+                        {rev.review || <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>Sin texto</span>}
                       </div>
-                    ) : (
-                      <span className="badge" style={{ background: 'rgba(156, 163, 175, 0.2)', color: '#9ca3af' }}>
-                        Sin asignar
-                      </span>
-                    )}
-                  </td>
-                  <td style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
-                    {rev.status === 1 ? (
-                      <span className="badge" style={{ background: 'rgba(34, 197, 94, 0.15)', color: '#22c55e', fontWeight: 'bold' }}>
-                        ✅ Aplicada
-                      </span>
-                    ) : (
-                      <span className="badge" style={{ background: 'rgba(234, 179, 8, 0.15)', color: '#eab308', fontWeight: 'bold' }}>
-                        ⏳ Nueva / Pool
-                      </span>
-                    )}
-                  </td>
-                  <td style={{ padding: '0.85rem 1rem', fontSize: '0.85rem' }}>
-                    {rev.link_review && rev.link_review.trim() !== '' ? (
-                      <a
-                        href={rev.link_review}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                    </td>
+                    <td style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
+                      {rev.profile ? (
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                          <span className="badge" style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#3b8df6', fontWeight: 'bold' }}>
+                            Perfil #{rev.profile.id}
+                          </span>
+                          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                            {rev.profile.gmail || rev.profile.name}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="badge" style={{ background: 'rgba(156, 163, 175, 0.2)', color: '#9ca3af' }}>
+                          Sin asignar
+                        </span>
+                      )}
+                    </td>
+                    <td style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
+                      {rev.status === 1 ? (
+                        <span className="badge" style={{ background: 'rgba(34, 197, 94, 0.15)', color: '#22c55e', fontWeight: 'bold' }}>
+                          ✅ Aplicada
+                        </span>
+                      ) : (
+                        <span className="badge" style={{ background: 'rgba(234, 179, 8, 0.15)', color: '#eab308', fontWeight: 'bold' }}>
+                          ⏳ Nueva / Pool
+                        </span>
+                      )}
+                    </td>
+                    <td style={{ padding: '0.85rem 1rem', fontSize: '0.85rem' }}>
+                      {rev.link_review && rev.link_review.trim() !== '' ? (
+                        <a
+                          href={rev.link_review}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn btn-secondary"
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            padding: '0.3rem 0.65rem',
+                            fontSize: '0.8rem',
+                            color: '#38bdf8',
+                            borderColor: 'rgba(56, 189, 248, 0.3)',
+                            textDecoration: 'none',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          <ExternalLink size={13} /> Ver Reseña
+                        </a>
+                      ) : (
+                        <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontStyle: 'italic' }}>Pendiente</span>
+                      )}
+                    </td>
+                    <td style={{ padding: '0.85rem 1rem', fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                      {rev.created_at ? new Date(rev.created_at).toLocaleDateString() : '-'}
+                    </td>
+                    <td style={{ padding: '0.85rem 1rem', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      <button
+                        type="button"
                         className="btn btn-secondary"
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          padding: '0.3rem 0.65rem',
-                          fontSize: '0.8rem',
-                          color: '#38bdf8',
-                          borderColor: 'rgba(56, 189, 248, 0.3)',
-                          textDecoration: 'none',
-                          whiteSpace: 'nowrap',
-                        }}
+                        style={{ padding: '0.35rem 0.6rem', marginRight: '0.4rem' }}
+                        onClick={() => handleOpenEdit(rev)}
+                        title="Editar"
                       >
-                        <ExternalLink size={13} /> Ver Reseña
-                      </a>
-                    ) : (
-                      <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontStyle: 'italic' }}>Pendiente</span>
-                    )}
-                  </td>
-                  <td style={{ padding: '0.85rem 1rem', fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                    {rev.created_at ? new Date(rev.created_at).toLocaleDateString() : '-'}
-                  </td>
-                  <td style={{ padding: '0.85rem 1rem', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
-                      style={{ padding: '0.35rem 0.6rem', marginRight: '0.4rem' }}
-                      onClick={() => handleOpenEdit(rev)}
-                      title="Editar"
-                    >
-                      <Edit2 size={14} />
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
-                      style={{ padding: '0.35rem 0.6rem', color: 'var(--error)' }}
-                      onClick={() => handleDelete(rev.id)}
-                      title="Eliminar"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
+                        <Edit2 size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        style={{ padding: '0.35rem 0.6rem', color: 'var(--error)' }}
+                        onClick={() => handleDelete(rev.id)}
+                        title="Eliminar"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}
@@ -539,7 +664,7 @@ export const GmapsReviews: React.FC = () => {
       {/* MODAL CREAR / EDITAR */}
       {showModal && (
         <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
-          <div className="modal-content card" style={{ maxWidth: '550px', width: '100%', padding: '1.75rem', position: 'relative' }}>
+          <div className="modal-content card" style={{ maxWidth: '560px', width: '100%', padding: '1.75rem', position: 'relative' }}>
             <button
               type="button"
               onClick={() => setShowModal(false)}
@@ -554,6 +679,24 @@ export const GmapsReviews: React.FC = () => {
             </h2>
 
             <form onSubmit={handleSave}>
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.35rem', fontWeight: 'bold' }}>
+                  📍 Ubicación / Location (Opcional)
+                </label>
+                <select
+                  className="input-field"
+                  value={formData.location_id}
+                  onChange={(e) => setFormData({ ...formData, location_id: e.target.value })}
+                >
+                  <option value="">-- Sin Ubicación (Pool Global) --</option>
+                  {locations.map((loc) => (
+                    <option key={loc.id} value={loc.id}>
+                      {loc.location} ({loc.state}) {loc.is_shared === 1 ? '🌐' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div className="form-group" style={{ marginBottom: '1rem' }}>
                 <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.35rem', fontWeight: 'bold' }}>
                   Place ID o Link de Google Maps *
@@ -673,6 +816,25 @@ export const GmapsReviews: React.FC = () => {
             <p style={{ margin: '0 0 1rem', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: '1.4' }}>
               Formato esperado por fila: <strong>Place ID, Rating, Review Text</strong>. Si omites el rating se asignará 5 por defecto.
             </p>
+
+            {/* SELECCIÓN DE UBICACIÓN / LOCATION PARA EL LOTE CSV */}
+            <div className="form-group" style={{ marginBottom: '1rem' }}>
+              <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.35rem', fontWeight: 'bold' }}>
+                📍 Ubicación / Location a asignar a todas las reseñas del CSV
+              </label>
+              <select
+                className="input-field"
+                value={csvLocationId}
+                onChange={(e) => setCsvLocationId(e.target.value)}
+              >
+                <option value="">-- Sin Ubicación (Pool Global) --</option>
+                {locations.map((loc) => (
+                  <option key={loc.id} value={loc.id}>
+                    {loc.location} ({loc.state}) {loc.is_shared === 1 ? '🌐' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             {/* SELECCIÓN DE ARCHIVO */}
             <div style={{ marginBottom: '1rem', border: '2px dashed var(--border)', padding: '1.25rem', borderRadius: '0.5rem', textAlign: 'center' }}>
